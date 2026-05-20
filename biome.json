@@ -1,0 +1,107 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
+  "files": {
+    "ignoreUnknown": false
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "asNeeded",
+      "arrowParentheses": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noUselessCatchBinding": "error",
+        "noUselessUndefined": "error"
+      },
+      "correctness": {
+        "noNextAsyncClientComponent": "error",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "useAsConstAssertion": "error",
+        "useConst": "error",
+        "useConsistentArrayType": {
+          "level": "error",
+          "options": {
+            "syntax": "generic"
+          }
+        },
+        "useForOf": "error",
+        "useImportType": "error",
+        "useExportType": "error",
+        "useConsistentCurlyBraces": "error",
+        "useSelfClosingElements": "error",
+        "useTemplate": "error",
+        "noProcessEnv": "error"
+      },
+      "suspicious": {
+        "noConsole": "off",
+        "noDoubleEquals": "error",
+        "noShadowRestrictedNames": "off",
+        "noReactForwardRef": "error",
+        "noUnusedExpressions": "error"
+      },
+      "nursery": {
+        "useInlineScriptId": "error",
+        "useImportsFirst": "error",
+        "noImpliedEval": "error",
+        "useArraySome": "error"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              {
+                "type": true,
+                "source": ["react", "react-dom"]
+              },
+              {
+                "type": true,
+                "source": [":NODE:"]
+              },
+              {
+                "type": true
+              },
+              ":BLANK_LINE:",
+              ["react", "react-dom"],
+              ":BLANK_LINE:",
+              ":NODE:",
+              ":BLANK_LINE:",
+              [":PACKAGE:"],
+              ":BLANK_LINE:",
+              ":ALIAS:",
+              ":BLANK_LINE:",
+              ":PATH:"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
