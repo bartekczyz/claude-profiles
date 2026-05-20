@@ -6,7 +6,8 @@
     "useIgnoreFile": false
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["**", "!**/node_modules", "!**/dist", "!src-tauri/target", "!src-tauri/gen", "!**/*.tsbuildinfo"]
   },
   "formatter": {
     "enabled": true,
