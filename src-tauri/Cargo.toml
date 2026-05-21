@@ -26,4 +26,6 @@ thiserror = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "6"
+icns = "0.4.0"
+plist = "1.9.0"
 
