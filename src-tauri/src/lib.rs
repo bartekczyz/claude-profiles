@@ -21,6 +21,10 @@ pub fn run() {
             commands::open_profile_in_app,
             commands::open_in_finder,
             commands::profile_paths,
+            commands::detect_existing_claude_install,
+            commands::import_existing_install,
+            commands::list_migration_backups,
+            commands::delete_migration_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

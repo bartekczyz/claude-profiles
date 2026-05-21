@@ -19,6 +19,7 @@ pub struct ExistingInstall {
 }
 
 impl ExistingInstall {
+    #[allow(dead_code)]
     pub fn any_detected(&self) -> bool {
         self.claude_desktop_path.is_some() || self.claude_code_path.is_some()
     }
@@ -129,14 +130,15 @@ pub fn import(params: ImportParams) -> AppResult<ImportOutcome> {
         return Err(AppError::Io(err));
     }
 
-    // Step 4: Move originals into the backup dir.
+    // Step 4: Move originals into the backup dir. `moved_gui` is tracked so
+    // that the CLI block's rollback can undo it; the CLI move has no later
+    // step that could fail, so we don't bother tracking moved_cli.
     let mut moved_gui: Option<PathBuf> = None;
-    let mut moved_cli: Option<PathBuf> = None;
     if copied_gui {
         let source = params.gui_source.as_ref().unwrap();
         let dest = params.backup_dir.join("Claude");
         if let Err(err) = fs::rename(source, &dest) {
-            rollback(&params, &moved_gui, &moved_cli);
+            rollback(&params, &moved_gui, &None);
             return Err(AppError::Io(err));
         }
         moved_gui = Some(dest);
@@ -145,10 +147,9 @@ pub fn import(params: ImportParams) -> AppResult<ImportOutcome> {
         let source = params.cli_source.as_ref().unwrap();
         let dest = params.backup_dir.join(".claude");
         if let Err(err) = fs::rename(source, &dest) {
-            rollback(&params, &moved_gui, &moved_cli);
+            rollback(&params, &moved_gui, &None);
             return Err(AppError::Io(err));
         }
-        moved_cli = Some(dest);
     }
 
     // Step 5: Build the profile struct. (Launcher generation + profiles.json
@@ -254,7 +255,7 @@ pub fn list_backups(app_data_dir: &Path) -> AppResult<Vec<MigrationBackupInfo>> 
             eligible_for_cleanup: now_ms - stamp >= SEVEN_DAYS_MS,
         });
     }
-    backups.sort_by(|left, right| right.created_at_ms.cmp(&left.created_at_ms));
+    backups.sort_by_key(|backup| std::cmp::Reverse(backup.created_at_ms));
     Ok(backups)
 }
 

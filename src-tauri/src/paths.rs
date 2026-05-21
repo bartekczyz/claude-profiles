@@ -62,6 +62,7 @@ pub fn claude_code_install_path() -> AppResult<PathBuf> {
     Ok(home.join(".claude"))
 }
 
+#[allow(dead_code)]
 pub fn migration_backup_root() -> AppResult<PathBuf> {
     Ok(app_data_dir()?.join("migration-backup"))
 }
