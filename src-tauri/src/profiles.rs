@@ -116,8 +116,22 @@ pub fn create(name: &str, color: &str, surfaces: Surfaces) -> AppResult<Profile>
         fs::create_dir_all(dir.join("cli-config"))?;
     }
 
+    // Generate launchers BEFORE persisting, so a launcher failure rolls back cleanly.
+    if profile.surfaces.gui {
+        if let Err(err) = crate::launchers::gui::generate(&profile, env!("CARGO_PKG_VERSION")) {
+            let _ = std::fs::remove_dir_all(&dir);
+            return Err(err);
+        }
+    }
+
     existing.push(profile.clone());
-    save_all(&existing)?;
+    if let Err(err) = save_all(&existing) {
+        if profile.surfaces.gui {
+            let _ = crate::launchers::gui::remove(&profile.name);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+        return Err(err);
+    }
     Ok(profile)
 }
 

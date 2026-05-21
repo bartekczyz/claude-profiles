@@ -12,6 +12,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_profiles,
             commands::create_profile,
+            commands::regenerate_launchers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
