@@ -124,8 +124,21 @@ pub fn create(name: &str, color: &str, surfaces: Surfaces) -> AppResult<Profile>
         }
     }
 
+    if profile.surfaces.cli {
+        if let Err(err) = crate::launchers::cli::generate(&profile) {
+            if profile.surfaces.gui {
+                let _ = crate::launchers::gui::remove(&profile.name);
+            }
+            let _ = std::fs::remove_dir_all(&dir);
+            return Err(err);
+        }
+    }
+
     existing.push(profile.clone());
     if let Err(err) = save_all(&existing) {
+        if profile.surfaces.cli {
+            let _ = crate::launchers::cli::remove(&profile.slug);
+        }
         if profile.surfaces.gui {
             let _ = crate::launchers::gui::remove(&profile.name);
         }
