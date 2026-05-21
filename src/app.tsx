@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/empty-state'
 import { MigrationDialog } from '@/components/migration-dialog'
 import { PathSetupBanner } from '@/components/path-setup-banner'
 import { ProfileDetail } from '@/components/profile-detail'
+import { SettingsView } from '@/components/settings-view'
 import { Sidebar } from '@/components/sidebar'
 import { WelcomeDialog } from '@/components/welcome-dialog'
 import { useAppState } from '@/hooks/use-app-state'
@@ -15,6 +16,8 @@ import { useMigration } from '@/hooks/use-migration'
 import { useProfiles } from '@/hooks/use-profiles'
 
 type ModalState = { kind: 'none' } | { kind: 'create' } | { kind: 'edit' } | { kind: 'delete' }
+
+type RightPane = { kind: 'profile' } | { kind: 'settings' }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 const DISMISSAL_WINDOW_MS = 7 * SEVEN_DAYS_MS
@@ -33,6 +36,8 @@ export default function App() {
   const dependencies = useDependencies()
   const [modal, setModal] = useState<ModalState>({ kind: 'none' })
   const [submitting, setSubmitting] = useState(false)
+  const [rightPane, setRightPane] = useState<RightPane>({ kind: 'profile' })
+  const [forceMigrationOpen, setForceMigrationOpen] = useState(false)
 
   const selected = profiles.profiles.find((profile) => profile.id === profiles.selectedId) ?? null
 
@@ -48,6 +53,8 @@ export default function App() {
     profiles.profiles.length === 0 &&
     migration.anyDetected &&
     !migrationDismissedRecently
+
+  const showMigration = shouldOfferMigration || forceMigrationOpen
 
   const anyCliProfile = profiles.profiles.some((profile) => profile.surfaces.cli)
   const pathBannerDismissedRecently = isWithinDismissalWindow(appState.state?.pathBannerDismissedAt)
@@ -120,10 +127,23 @@ export default function App() {
         <Sidebar
           profiles={profiles.profiles}
           selectedId={profiles.selectedId}
-          onSelect={profiles.select}
+          onSelect={(id) => {
+            profiles.select(id)
+            setRightPane({ kind: 'profile' })
+          }}
           onCreate={() => setModal({ kind: 'create' })}
+          onSettings={() => setRightPane({ kind: 'settings' })}
         />
-        {selected ? (
+        {rightPane.kind === 'settings' ? (
+          <SettingsView
+            onClose={() => setRightPane({ kind: 'profile' })}
+            onOpenMigration={async () => {
+              await migration.refresh()
+              setRightPane({ kind: 'profile' })
+              setForceMigrationOpen(true)
+            }}
+          />
+        ) : selected ? (
           <ProfileDetail
             profile={selected}
             onEdit={() => setModal({ kind: 'edit' })}
@@ -164,17 +184,20 @@ export default function App() {
         />
       ) : null}
 
-      {shouldOfferMigration && migration.existing ? (
+      {showMigration && migration.existing ? (
         <MigrationDialog
           open
           existing={migration.existing}
           onClose={async () => {
+            setForceMigrationOpen(false)
             await appState.update({ migrationDismissedAt: new Date().toISOString() })
           }}
           onImport={async (input) => {
             const imported = await migration.import(input)
             await profiles.refresh()
             profiles.select(imported.id)
+            setForceMigrationOpen(false)
+            setRightPane({ kind: 'profile' })
             return imported
           }}
         />

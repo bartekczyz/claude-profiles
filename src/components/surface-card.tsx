@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import { Button } from '@/components/ui/button'
 
 type Props = {
@@ -6,10 +8,19 @@ type Props = {
   description: string
   primaryAction?: { label: string; onClick: () => void }
   secondaryActions?: Array<{ label: string; onClick: () => void }>
+  primarySuffix?: ReactNode
   onToggle: (enabled: boolean) => void
 }
 
-export function SurfaceCard({ title, enabled, description, primaryAction, secondaryActions, onToggle }: Props) {
+export function SurfaceCard({
+  title,
+  enabled,
+  description,
+  primaryAction,
+  secondaryActions,
+  primarySuffix,
+  onToggle,
+}: Props) {
   return (
     <section className="rounded-[10px] border border-(--color-border) p-4">
       <header className="flex items-start justify-between gap-4">
@@ -23,12 +34,13 @@ export function SurfaceCard({ title, enabled, description, primaryAction, second
         </label>
       </header>
       {enabled ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {primaryAction ? (
             <Button size="sm" onClick={primaryAction.onClick}>
               {primaryAction.label}
             </Button>
           ) : null}
+          {primarySuffix ?? null}
           {(secondaryActions ?? []).map((action) => (
             <Button key={action.label} size="sm" variant="ghost" onClick={action.onClick}>
               {action.label}

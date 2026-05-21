@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { copyToClipboard, profilePaths as fetchProfilePaths, openInFinder, openProfileInApp } from '@/lib/commands'
 
+import { DeepLinkInfo } from './deep-link-info'
 import { SurfaceCard } from './surface-card'
 
 type Props = {
@@ -38,7 +39,7 @@ export function ProfileDetail({ profile, onEdit, onDelete, onToggle }: Props) {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6">
+    <main className="flex-1 overflow-y-auto bg-background p-6">
       <header className="flex items-center gap-4">
         <span className="inline-block h-10 w-10 shrink-0 rounded-xl" style={{ background: profile.color }} />
         <div className="flex-1">
@@ -64,6 +65,7 @@ export function ProfileDetail({ profile, onEdit, onDelete, onToggle }: Props) {
                 }
               : undefined
           }
+          primarySuffix={profile.surfaces.gui ? <DeepLinkInfo /> : null}
           secondaryActions={
             profile.surfaces.gui && paths
               ? [

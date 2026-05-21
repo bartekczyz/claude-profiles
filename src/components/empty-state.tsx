@@ -6,7 +6,7 @@ type Props = {
 
 export function EmptyState({ onCreate }: Props) {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-12 text-center">
+    <div className="flex h-full flex-1 flex-col items-center justify-center bg-background px-12 text-center">
       <svg width="120" height="80" viewBox="0 0 120 80" fill="none" aria-hidden="true">
         <title>two-overlapping-circles</title>
         <circle cx="48" cy="40" r="32" fill="#7C3AED" fillOpacity="0.35" />
