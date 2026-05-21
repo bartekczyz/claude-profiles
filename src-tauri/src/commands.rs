@@ -21,5 +21,8 @@ pub fn regenerate_launchers(id: String) -> AppResult<()> {
     if profile.surfaces.gui {
         crate::launchers::gui::generate(profile, env!("CARGO_PKG_VERSION"))?;
     }
+    if profile.surfaces.cli {
+        crate::launchers::cli::generate(profile)?;
+    }
     Ok(())
 }
