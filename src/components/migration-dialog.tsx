@@ -101,7 +101,7 @@ export function MigrationDialog({ open, existing, onClose, onImport }: Props) {
               from <code>CLAUDE_CONFIG_DIR</code>, so the existing credentials don&apos;t carry over.
             </p>
           ) : null}
-          <p className="text-xs text-[color:var(--color-muted)]">
+          <p className="text-xs text-muted-foreground">
             We&apos;ll move your existing data into this profile and keep a one-shot backup under{' '}
             <code>~/Library/Application Support/claude-profiles/migration-backup-…/</code>. You can delete the backup
             from Settings after 7 days.

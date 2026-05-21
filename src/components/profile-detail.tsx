@@ -44,7 +44,7 @@ export function ProfileDetail({ profile, onEdit, onDelete, onToggle }: Props) {
         <span className="inline-block h-10 w-10 shrink-0 rounded-xl" style={{ background: profile.color }} />
         <div className="flex-1">
           <h2 className="text-xl font-semibold">{profile.name}</h2>
-          <p className="text-xs text-(--color-muted)">{profile.slug}</p>
+          <p className="text-xs text-muted-foreground">{profile.slug}</p>
         </div>
         <Button variant="ghost" size="sm" onClick={onEdit}>
           Edit
@@ -115,7 +115,7 @@ export function ProfileDetail({ profile, onEdit, onDelete, onToggle }: Props) {
 
         <section className="rounded-[10px] border border-red-200 p-4">
           <h3 className="text-sm font-semibold text-red-700">Danger zone</h3>
-          <p className="mt-1 text-xs text-(--color-muted)">
+          <p className="mt-1 text-xs text-muted-foreground">
             Deleting a profile removes its launchers and data directory.
           </p>
           <Button variant="ghost" size="sm" className="mt-3 text-red-700" onClick={onDelete}>

@@ -81,7 +81,7 @@ export function CreateProfileModal({ open, dependencies, submitting, onClose, on
               className={
                 dependencies.claudeAppInstalled
                   ? 'flex items-center gap-2 text-sm'
-                  : 'flex items-center gap-2 text-sm text-[color:var(--color-muted)]'
+                  : 'flex items-center gap-2 text-sm text-muted-foreground'
               }
             >
               <input
@@ -93,7 +93,7 @@ export function CreateProfileModal({ open, dependencies, submitting, onClose, on
               Desktop app launcher (in /Applications)
             </label>
             {!dependencies.claudeAppInstalled ? (
-              <p className="pl-6 text-xs text-[color:var(--color-muted)]">
+              <p className="pl-6 text-xs text-muted-foreground">
                 Install{' '}
                 <a className="underline" href="https://claude.ai/download" target="_blank" rel="noreferrer">
                   Claude Desktop
@@ -105,7 +105,7 @@ export function CreateProfileModal({ open, dependencies, submitting, onClose, on
               className={
                 dependencies.claudeCliInstalled
                   ? 'flex items-center gap-2 text-sm'
-                  : 'flex items-center gap-2 text-sm text-[color:var(--color-muted)]'
+                  : 'flex items-center gap-2 text-sm text-muted-foreground'
               }
             >
               <input
@@ -117,7 +117,7 @@ export function CreateProfileModal({ open, dependencies, submitting, onClose, on
               Claude Code CLI wrapper (in ~/.local/bin)
             </label>
             {!dependencies.claudeCliInstalled ? (
-              <p className="pl-6 text-xs text-[color:var(--color-muted)]">
+              <p className="pl-6 text-xs text-muted-foreground">
                 Install Claude Code first: <code>npm install -g @anthropic-ai/claude-code</code>
               </p>
             ) : null}

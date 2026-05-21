@@ -26,7 +26,7 @@ export function SurfaceCard({
       <header className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="mt-1 text-xs text-(--color-muted)">{description}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
         </div>
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={enabled} onChange={(event) => onToggle(event.target.checked)} />

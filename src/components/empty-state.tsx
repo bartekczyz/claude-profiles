@@ -13,7 +13,7 @@ export function EmptyState({ onCreate }: Props) {
         <circle cx="76" cy="40" r="32" fill="#3B82F6" fillOpacity="0.35" />
       </svg>
       <h2 className="mt-8 text-xl font-semibold">No profiles yet</h2>
-      <p className="mt-2 max-w-sm text-sm text-(--color-muted)">
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         Each profile is one Claude account, with its own desktop app launcher and CLI wrapper.
       </p>
       <Button className="mt-6" onClick={onCreate}>

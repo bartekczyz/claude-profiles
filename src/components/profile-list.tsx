@@ -24,7 +24,7 @@ export function ProfileList({ profiles, selectedId, onSelect }: Props) {
             >
               <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: profile.color }} />
               <span className="flex-1 truncate text-left text-sm">{profile.name}</span>
-              <span className="flex shrink-0 gap-1 text-[10px] text-(--color-muted)">
+              <span className="flex shrink-0 gap-1 text-[10px] text-muted-foreground">
                 {profile.surfaces.gui ? <span title="Desktop">GUI</span> : null}
                 {profile.surfaces.cli ? <span title="CLI">CLI</span> : null}
               </span>

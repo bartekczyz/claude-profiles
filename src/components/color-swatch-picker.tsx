@@ -21,7 +21,7 @@ export function ColorSwatchPicker({ value, onChange }: Props) {
               aria-label={`Pick color ${preset}`}
               onClick={() => onChange(preset)}
               className={
-                selected ? 'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-(--color-fg)' : 'h-8 w-8 rounded-full'
+                selected ? 'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-foreground' : 'h-8 w-8 rounded-full'
               }
               style={{ background: preset }}
             />
