@@ -16,3 +16,18 @@ export type AppError = {
   kind: 'Io' | 'Json' | 'Validation' | 'NotFound'
   message: string
 }
+
+export type Surface = 'gui' | 'cli'
+
+export type ProfilePatch = {
+  name?: string
+  color?: string
+}
+
+export type ProfilePaths = {
+  dataDir: string
+  guiDataDir: string
+  cliConfigDir: string
+  guiLauncherPath: string
+  cliWrapperPath: string
+}
