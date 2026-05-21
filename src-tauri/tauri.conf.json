@@ -18,7 +18,16 @@
         "minWidth": 600,
         "minHeight": 400,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "transparent": true,
+        "decorations": true,
+        "titleBarStyle": "Transparent",
+        "hiddenTitle": false,
+        "windowEffects": {
+          "effects": ["sidebar"],
+          "state": "followsWindowActiveState",
+          "radius": 10
+        }
       }
     ],
     "security": {
