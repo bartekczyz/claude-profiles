@@ -1,10 +1,15 @@
 import type {
+  AppState,
+  AppStatePatch,
+  Dependencies,
   ExistingInstallInfo,
   ImportExistingInput,
   MigrationBackupInfo,
+  PathHookOutcome,
   Profile,
   ProfilePatch,
   ProfilePaths,
+  Shell,
   Surface,
   Surfaces,
 } from './types'
@@ -62,4 +67,24 @@ export function listMigrationBackups(): Promise<Array<MigrationBackupInfo>> {
 
 export function deleteMigrationBackup(path: string): Promise<void> {
   return invoke('delete_migration_backup', { path })
+}
+
+export function checkDependencies(): Promise<Dependencies> {
+  return invoke<Dependencies>('check_dependencies')
+}
+
+export function detectShell(): Promise<Shell> {
+  return invoke<Shell>('detect_shell')
+}
+
+export function installPathHook(shell: Shell): Promise<PathHookOutcome> {
+  return invoke<PathHookOutcome>('install_path_hook', { shell })
+}
+
+export function loadAppState(): Promise<AppState> {
+  return invoke<AppState>('load_app_state')
+}
+
+export function updateAppState(patch: AppStatePatch): Promise<AppState> {
+  return invoke<AppState>('update_app_state', { patch })
 }

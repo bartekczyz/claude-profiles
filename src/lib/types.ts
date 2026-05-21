@@ -50,3 +50,29 @@ export type MigrationBackupInfo = {
   sizeBytes: number
   eligibleForCleanup: boolean
 }
+
+export type Dependencies = {
+  claudeAppInstalled: boolean
+  claudeCliInstalled: boolean
+  localBinOnPath: boolean
+}
+
+export type Shell = 'zsh' | 'bash' | 'fish'
+
+export type PathHookOutcome =
+  | { outcome: 'alreadyInstalled'; rcPath: string }
+  | { outcome: 'installed'; rcPath: string; backupPath: string }
+
+export type AppState = {
+  welcomeShown: boolean
+  migrationDismissedAt: string | null
+  pathBannerDismissedAt: string | null
+}
+
+export type AppStatePatch = {
+  welcomeShown?: boolean
+  migrationDismissedAt?: string
+  pathBannerDismissedAt?: string
+  clearMigrationDismissed?: boolean
+  clearPathBannerDismissed?: boolean
+}
