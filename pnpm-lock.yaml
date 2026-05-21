@@ -15,11 +15,14 @@ importers:
         specifier: 2.11.0
         version: 2.11.0
       '@tauri-apps/plugin-clipboard-manager':
-        specifier: ~2
+        specifier: 2.3.2
         version: 2.3.2
       '@tauri-apps/plugin-fs':
         specifier: 2.5.1
         version: 2.5.1
+      '@tauri-apps/plugin-window-state':
+        specifier: ~2
+        version: 2.4.1
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -1428,6 +1431,9 @@ packages:
 
   '@tauri-apps/plugin-fs@2.5.1':
     resolution: {integrity: sha512-9Lz+Jopp6QyeEWhlpkMx4R/+P9HgR+AVAI4vOZhlT8Xaymtz8iVI/Ov984/XTqgJz/5gz5NretqPB/XEMS3NhQ==}
+
+  '@tauri-apps/plugin-window-state@2.4.1':
+    resolution: {integrity: sha512-OuvdrzyY8Q5Dbzpj+GcrnV1iCeoZbcFdzMjanZMMcAEUNy/6PH5pxZPXpaZLOR7whlzXiuzx0L9EKZbH7zpdRw==}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -4489,6 +4495,10 @@ snapshots:
       '@tauri-apps/api': 2.11.0
 
   '@tauri-apps/plugin-fs@2.5.1':
+    dependencies:
+      '@tauri-apps/api': 2.11.0
+
+  '@tauri-apps/plugin-window-state@2.4.1':
     dependencies:
       '@tauri-apps/api': 2.11.0
 
