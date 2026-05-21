@@ -28,6 +28,11 @@ pub fn run() {
             commands::import_existing_install,
             commands::list_migration_backups,
             commands::delete_migration_backup,
+            commands::check_dependencies,
+            commands::detect_shell,
+            commands::install_path_hook,
+            commands::load_app_state,
+            commands::update_app_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

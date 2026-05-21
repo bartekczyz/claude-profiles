@@ -1,7 +1,10 @@
 use std::process::Command;
 
+use crate::app_state::{self, AppState, AppStatePatch};
+use crate::deps::{self, Dependencies};
 use crate::error::{AppError, AppResult};
 use crate::migration::{self, ExistingInstall, ImportParams, MigrationBackupInfo};
+use crate::path_setup::{self, PathHookOutcome, Shell};
 use crate::paths::{
     claude_code_install_path, claude_desktop_install_path, gui_launcher_path,
     next_migration_backup_dir, profile_dir as profile_data_dir,
@@ -212,4 +215,30 @@ pub fn list_migration_backups() -> AppResult<Vec<MigrationBackupInfo>> {
 #[tauri::command]
 pub fn delete_migration_backup(path: String) -> AppResult<()> {
     migration::delete_backup(std::path::Path::new(&path))
+}
+
+#[tauri::command]
+pub fn check_dependencies() -> AppResult<Dependencies> {
+    deps::check_dependencies()
+}
+
+#[tauri::command]
+pub fn detect_shell() -> Shell {
+    Shell::detect_from_env()
+}
+
+#[tauri::command]
+pub fn install_path_hook(shell: Shell) -> AppResult<PathHookOutcome> {
+    let home = dirs::home_dir().ok_or_else(|| AppError::NotFound("home dir unknown".into()))?;
+    path_setup::install_path_hook(shell, &home)
+}
+
+#[tauri::command]
+pub fn load_app_state() -> AppResult<AppState> {
+    app_state::load()
+}
+
+#[tauri::command]
+pub fn update_app_state(patch: AppStatePatch) -> AppResult<AppState> {
+    app_state::apply(patch)
 }
