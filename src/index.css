@@ -29,8 +29,8 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-bg);
   color: var(--color-fg);
+  background: transparent;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', system-ui, sans-serif;
 }
 
@@ -151,7 +151,7 @@ body {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-transparent text-foreground;
   }
   html {
     @apply font-sans;
