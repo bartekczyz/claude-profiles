@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { renderHookWithQuery } from '@/test/render-with-query'
 
 import { useAppState } from './use-app-state'
 
@@ -18,11 +20,12 @@ describe('useAppState', () => {
       welcomeShown: true,
       migrationDismissedAt: null,
       pathBannerDismissedAt: null,
+      themeMode: 'system',
     })
 
-    const { result } = renderHook(() => useAppState())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.state?.welcomeShown).toBe(true)
+    const { result } = renderHookWithQuery(() => useAppState())
+    await waitFor(() => expect(result.current).not.toBeNull())
+    expect(result.current.state.welcomeShown).toBe(true)
   })
 
   it('update passes the patch through invoke and replaces state', async () => {
@@ -30,14 +33,16 @@ describe('useAppState', () => {
       welcomeShown: false,
       migrationDismissedAt: null,
       pathBannerDismissedAt: null,
+      themeMode: 'system',
     })
-    const { result } = renderHook(() => useAppState())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useAppState())
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     mockInvoke.mockResolvedValueOnce({
       welcomeShown: true,
       migrationDismissedAt: null,
       pathBannerDismissedAt: null,
+      themeMode: 'system',
     })
 
     await act(async () => {
@@ -47,13 +52,6 @@ describe('useAppState', () => {
     expect(mockInvoke).toHaveBeenLastCalledWith('update_app_state', {
       patch: { welcomeShown: true },
     })
-    expect(result.current.state?.welcomeShown).toBe(true)
-  })
-
-  it('captures load errors', async () => {
-    mockInvoke.mockRejectedValueOnce({ kind: 'Io', message: 'oops' })
-    const { result } = renderHook(() => useAppState())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.error).toBe('oops')
+    await waitFor(() => expect(result.current.state.welcomeShown).toBe(true))
   })
 })

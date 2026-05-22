@@ -1,7 +1,9 @@
 import { invoke } from '@tauri-apps/api/core'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { renderWithQuery } from '@/test/render-with-query'
 
 import { SettingsView } from './settings-view'
 
@@ -20,6 +22,7 @@ const DEFAULT_STATE = {
   welcomeShown: true,
   migrationDismissedAt: null,
   pathBannerDismissedAt: null,
+  themeMode: 'system' as const,
 }
 
 beforeEach(() => {
@@ -60,13 +63,13 @@ function primeInitialLoads({
 describe('SettingsView', () => {
   it('renders the app version from getVersion()', async () => {
     primeInitialLoads()
-    render(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    renderWithQuery(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
     expect(await screen.findByText(/claude-profiles 0\.1\.0/)).toBeInTheDocument()
   })
 
   it('shows green checks for all-installed dependencies', async () => {
     primeInitialLoads()
-    render(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    renderWithQuery(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
     await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
     expect(screen.getByText(/Claude Desktop: ✓ installed/)).toBeInTheDocument()
     expect(screen.getByText(/Claude Code CLI: ✓ installed/)).toBeInTheDocument()
@@ -74,14 +77,14 @@ describe('SettingsView', () => {
 
   it('shows the empty-state for migration backups when there are none', async () => {
     primeInitialLoads({ backups: [] })
-    render(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    renderWithQuery(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
     expect(await screen.findByText(/No migration backups/)).toBeInTheDocument()
   })
 
   it('opens migration dialog and clears prior dismissal when detect-and-import finds installs', async () => {
     primeInitialLoads()
     const onOpenMigration = vi.fn()
-    render(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
+    renderWithQuery(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
     await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
 
     // After initial loads, swap to one-shot mocks for the action flow.
@@ -107,7 +110,7 @@ describe('SettingsView', () => {
   it('shows the "no existing installs" message when detect returns empty', async () => {
     primeInitialLoads()
     const onOpenMigration = vi.fn()
-    render(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
+    renderWithQuery(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
     await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
 
     mockInvoke.mockReset()
@@ -125,7 +128,7 @@ describe('SettingsView', () => {
 
   it('reset button calls update_app_state with welcomeShown:false + clear flags', async () => {
     primeInitialLoads()
-    render(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    renderWithQuery(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
     await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
 
     mockInvoke.mockReset()

@@ -1,42 +1,51 @@
-import type { AppError, MigrationBackupInfo } from '@/lib/types'
+import type { MigrationBackupInfo } from '@/lib/types'
 
-import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 
 import { deleteMigrationBackup, listMigrationBackups } from '@/lib/commands'
+import { queryKeys } from '@/lib/query/keys'
 
 type UseMigrationBackupsResult = {
   backups: Array<MigrationBackupInfo>
-  loading: boolean
-  error: string | null
   remove: (path: string) => Promise<void>
   refresh: () => Promise<void>
 }
 
 export function useMigrationBackups(): UseMigrationBackupsResult {
-  const [backups, setBackups] = useState<Array<MigrationBackupInfo>>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.migration.backups,
+    queryFn: listMigrationBackups,
+  })
 
-  async function refresh() {
-    setError(null)
-    try {
-      setBackups(await listMigrationBackups())
-    } catch (caught) {
-      setError((caught as AppError).message ?? String(caught))
-    }
+  const removeMutation = useMutation({
+    mutationFn: deleteMigrationBackup,
+    onMutate: async (path) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.migration.backups })
+      const previous = queryClient.getQueryData<Array<MigrationBackupInfo>>(queryKeys.migration.backups)
+      if (previous) {
+        queryClient.setQueryData(
+          queryKeys.migration.backups,
+          previous.filter((backup) => backup.path !== path),
+        )
+      }
+      return { previous }
+    },
+    onError: (_error, _path, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.migration.backups, context.previous)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.migration.backups })
+    },
+  })
+
+  return {
+    backups: data,
+    remove: (path) => removeMutation.mutateAsync(path).then(() => undefined),
+    refresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.migration.backups })
+    },
   }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh is intentionally only called on mount
-  useEffect(() => {
-    void refresh().finally(() => {
-      setLoading(false)
-    })
-  }, [])
-
-  async function remove(path: string) {
-    await deleteMigrationBackup(path)
-    setBackups((previous) => previous.filter((backup) => backup.path !== path))
-  }
-
-  return { backups, loading, error, remove, refresh }
 }

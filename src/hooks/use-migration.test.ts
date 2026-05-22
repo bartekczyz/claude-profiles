@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { renderHookWithQuery } from '@/test/render-with-query'
 
 import { useMigration } from './use-migration'
 
@@ -19,35 +21,26 @@ describe('useMigration', () => {
       claudeCodePath: null,
     })
 
-    const { result } = renderHook(() => useMigration())
+    const { result } = renderHookWithQuery(() => useMigration())
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.existing?.claudeDesktopPath).toMatch(/Claude$/)
+    await waitFor(() => expect(result.current).not.toBeNull())
+    expect(result.current.existing.claudeDesktopPath).toMatch(/Claude$/)
     expect(result.current.anyDetected).toBe(true)
   })
 
   it('reports anyDetected=false when neither path was found', async () => {
     mockInvoke.mockResolvedValueOnce({ claudeDesktopPath: null, claudeCodePath: null })
 
-    const { result } = renderHook(() => useMigration())
+    const { result } = renderHookWithQuery(() => useMigration())
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    await waitFor(() => expect(result.current).not.toBeNull())
     expect(result.current.anyDetected).toBe(false)
-  })
-
-  it('surfaces backend errors as a string', async () => {
-    mockInvoke.mockRejectedValueOnce({ kind: 'Io', message: 'permission denied' })
-
-    const { result } = renderHook(() => useMigration())
-
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.error).toBe('permission denied')
   })
 
   it('import passes the input through to invoke', async () => {
     mockInvoke.mockResolvedValueOnce({ claudeDesktopPath: '/x', claudeCodePath: null })
-    const { result } = renderHook(() => useMigration())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useMigration())
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     const fakeProfile = {
       id: '1',

@@ -82,6 +82,16 @@ body::before {
   }
 }
 
+@keyframes design-skeleton {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes design-modal-in {
   from {
     transform: translateY(8px) scale(0.985);

@@ -1,36 +1,26 @@
-import type { AppError, Dependencies } from '@/lib/types'
+import type { Dependencies } from '@/lib/types'
 
-import { useEffect, useState } from 'react'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 
 import { checkDependencies } from '@/lib/commands'
+import { queryKeys } from '@/lib/query/keys'
 
 type UseDependenciesResult = {
-  deps: Dependencies | null
-  loading: boolean
-  error: string | null
+  deps: Dependencies
   refresh: () => Promise<void>
 }
 
 export function useDependencies(): UseDependenciesResult {
-  const [deps, setDeps] = useState<Dependencies | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.dependencies,
+    queryFn: checkDependencies,
+  })
 
-  async function refresh() {
-    setError(null)
-    try {
-      setDeps(await checkDependencies())
-    } catch (caught) {
-      setError((caught as AppError).message ?? String(caught))
-    }
+  return {
+    deps: data,
+    refresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dependencies })
+    },
   }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh is intentionally only called on mount
-  useEffect(() => {
-    void refresh().finally(() => {
-      setLoading(false)
-    })
-  }, [])
-
-  return { deps, loading, error, refresh }
 }

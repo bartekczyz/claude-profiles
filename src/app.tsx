@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
 import { CreateProfileModal } from '@/components/create-profile-modal'
 import { DeleteProfileDialog } from '@/components/delete-profile-dialog'
@@ -7,14 +7,18 @@ import { EmptyState } from '@/components/empty-state'
 import { MigrationDialog } from '@/components/migration-dialog'
 import { PathSetupBanner } from '@/components/path-setup-banner'
 import { ProfileDetail } from '@/components/profile-detail'
+import { ProfileDetailSkeleton } from '@/components/profile-detail/skeleton'
 import { SettingsView } from '@/components/settings-view'
+import { SettingsViewSkeleton } from '@/components/settings-view/skeleton'
 import { Sidebar } from '@/components/sidebar'
+import { SidebarSkeleton } from '@/components/sidebar/skeleton'
 import { WelcomeDialog } from '@/components/welcome-dialog'
 import { useTheme } from '@/design'
 import { useAppState } from '@/hooks/use-app-state'
 import { useDependencies } from '@/hooks/use-dependencies'
 import { useMigration } from '@/hooks/use-migration'
 import { useProfiles } from '@/hooks/use-profiles'
+import { QueryErrorBoundary } from '@/lib/query/error-boundary'
 
 type ModalState = { kind: 'none' } | { kind: 'create' } | { kind: 'edit' } | { kind: 'delete' }
 
@@ -30,7 +34,16 @@ function isWithinDismissalWindow(timestamp: string | null | undefined): boolean 
   return Date.now() - new Date(timestamp).getTime() < DISMISSAL_WINDOW_MS
 }
 
-export default function App() {
+function AppShellSkeleton() {
+  return (
+    <div className="flex h-full">
+      <SidebarSkeleton />
+      <ProfileDetailSkeleton />
+    </div>
+  )
+}
+
+function AppContent() {
   const profiles = useProfiles()
   const migration = useMigration()
   const appState = useAppState()
@@ -41,25 +54,22 @@ export default function App() {
   const [forceMigrationOpen, setForceMigrationOpen] = useState(false)
 
   const theme = useTheme()
-  const persistedThemeMode = appState.state?.themeMode
+  const persistedThemeMode = appState.state.themeMode
 
   useEffect(() => {
-    if (persistedThemeMode && persistedThemeMode !== theme.mode) {
+    if (persistedThemeMode !== theme.mode) {
       theme.setMode(persistedThemeMode)
     }
   }, [persistedThemeMode, theme])
 
   const selected = profiles.profiles.find((profile) => profile.id === profiles.selectedId) ?? null
 
-  const shouldShowWelcome = !appState.loading && appState.state !== null && !appState.state.welcomeShown
+  const shouldShowWelcome = !appState.state.welcomeShown
 
-  const migrationDismissedRecently = isWithinDismissalWindow(appState.state?.migrationDismissedAt)
+  const migrationDismissedRecently = isWithinDismissalWindow(appState.state.migrationDismissedAt)
 
   const shouldOfferMigration =
-    !profiles.loading &&
-    !migration.loading &&
-    !appState.loading &&
-    appState.state?.welcomeShown === true &&
+    appState.state.welcomeShown &&
     profiles.profiles.length === 0 &&
     migration.anyDetected &&
     !migrationDismissedRecently
@@ -67,14 +77,11 @@ export default function App() {
   const showMigration = shouldOfferMigration || forceMigrationOpen
 
   const anyCliProfile = profiles.profiles.some((profile) => profile.surfaces.cli)
-  const pathBannerDismissedRecently = isWithinDismissalWindow(appState.state?.pathBannerDismissedAt)
+  const pathBannerDismissedRecently = isWithinDismissalWindow(appState.state.pathBannerDismissedAt)
 
   const shouldShowPathBanner =
-    !profiles.loading &&
-    !dependencies.loading &&
-    !appState.loading &&
-    appState.state?.welcomeShown === true &&
-    dependencies.deps?.localBinOnPath === false &&
+    appState.state.welcomeShown &&
+    dependencies.deps.localBinOnPath === false &&
     anyCliProfile &&
     !pathBannerDismissedRecently
 
@@ -104,10 +111,6 @@ export default function App() {
       return
     }
     await profiles.remove({ id: selected.id, ...input })
-  }
-
-  if (profiles.loading) {
-    return <div className="flex h-full items-center justify-center text-sm">Loading…</div>
   }
 
   if (shouldShowWelcome) {
@@ -145,37 +148,43 @@ export default function App() {
           onSettings={() => setRightPane({ kind: 'settings' })}
         />
         {rightPane.kind === 'settings' ? (
-          <SettingsView
-            onClose={() => setRightPane({ kind: 'profile' })}
-            onOpenMigration={async () => {
-              await migration.refresh()
-              setRightPane({ kind: 'profile' })
-              setForceMigrationOpen(true)
-            }}
-          />
+          <Suspense fallback={<SettingsViewSkeleton />}>
+            <QueryErrorBoundary>
+              <SettingsView
+                onClose={() => setRightPane({ kind: 'profile' })}
+                onOpenMigration={async () => {
+                  await migration.refresh()
+                  setRightPane({ kind: 'profile' })
+                  setForceMigrationOpen(true)
+                }}
+              />
+            </QueryErrorBoundary>
+          </Suspense>
         ) : selected ? (
-          <ProfileDetail
-            profile={selected}
-            onEdit={() => setModal({ kind: 'edit' })}
-            onDelete={() => setModal({ kind: 'delete' })}
-            onToggle={async (surface, enabled) => {
-              await profiles.toggle({ id: selected.id, surface, enabled })
-            }}
-          />
+          <Suspense fallback={<ProfileDetailSkeleton />}>
+            <QueryErrorBoundary>
+              <ProfileDetail
+                profile={selected}
+                onEdit={() => setModal({ kind: 'edit' })}
+                onDelete={() => setModal({ kind: 'delete' })}
+                onToggle={async (surface, enabled) => {
+                  await profiles.toggle({ id: selected.id, surface, enabled })
+                }}
+              />
+            </QueryErrorBoundary>
+          </Suspense>
         ) : (
           <EmptyState onCreate={() => setModal({ kind: 'create' })} />
         )}
       </div>
 
-      {dependencies.deps ? (
-        <CreateProfileModal
-          open={modal.kind === 'create'}
-          dependencies={dependencies.deps}
-          submitting={submitting}
-          onClose={() => setModal({ kind: 'none' })}
-          onCreate={handleCreate}
-        />
-      ) : null}
+      <CreateProfileModal
+        open={modal.kind === 'create'}
+        dependencies={dependencies.deps}
+        submitting={submitting}
+        onClose={() => setModal({ kind: 'none' })}
+        onCreate={handleCreate}
+      />
       {selected ? (
         <EditProfileModal
           open={modal.kind === 'edit'}
@@ -194,7 +203,7 @@ export default function App() {
         />
       ) : null}
 
-      {showMigration && migration.existing ? (
+      {showMigration ? (
         <MigrationDialog
           open
           existing={migration.existing}
@@ -212,12 +221,16 @@ export default function App() {
           }}
         />
       ) : null}
-
-      {profiles.error ? (
-        <div className="pointer-events-none absolute right-4 bottom-4 max-w-sm rounded-md bg-red px-3 py-2 text-sm text-white shadow">
-          {profiles.error}
-        </div>
-      ) : null}
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <QueryErrorBoundary>
+      <Suspense fallback={<AppShellSkeleton />}>
+        <AppContent />
+      </Suspense>
+    </QueryErrorBoundary>
   )
 }

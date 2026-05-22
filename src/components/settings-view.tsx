@@ -104,26 +104,18 @@ export function SettingsView({ onClose, onOpenMigration }: Props) {
             Refresh
           </Button>
         </div>
-        {dependencies.deps ? (
-          <ul className="space-y-1 text-sm">
-            <li>Claude Desktop: {dependencies.deps.claudeAppInstalled ? '✓ installed' : '✗ not found'}</li>
-            <li>Claude Code CLI: {dependencies.deps.claudeCliInstalled ? '✓ installed' : '✗ not found'}</li>
-            <li>
-              <code>~/.local/bin</code> on PATH: {dependencies.deps.localBinOnPath ? '✓ yes' : '✗ no'}
-            </li>
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        )}
+        <ul className="space-y-1 text-sm">
+          <li>Claude Desktop: {dependencies.deps.claudeAppInstalled ? '✓ installed' : '✗ not found'}</li>
+          <li>Claude Code CLI: {dependencies.deps.claudeCliInstalled ? '✓ installed' : '✗ not found'}</li>
+          <li>
+            <code>~/.local/bin</code> on PATH: {dependencies.deps.localBinOnPath ? '✓ yes' : '✗ no'}
+          </li>
+        </ul>
       </section>
 
       <section className="mb-6">
         <h3 className="mb-2 text-sm font-semibold">Migration backups</h3>
-        {backups.loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : (
-          <MigrationBackupsList backups={backups.backups} onDelete={backups.remove} />
-        )}
+        <MigrationBackupsList backups={backups.backups} onDelete={backups.remove} />
       </section>
 
       <section className="mb-6">

@@ -1,8 +1,10 @@
 import type { Profile } from '@/lib/types'
 
 import { invoke } from '@tauri-apps/api/core'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { renderHookWithQuery } from '@/test/render-with-query'
 
 import { useProfiles } from './use-profiles'
 
@@ -31,32 +33,17 @@ describe('useProfiles', () => {
     const fixture = profileFixture()
     mockInvoke.mockResolvedValueOnce([fixture])
 
-    const { result } = renderHook(() => useProfiles())
+    const { result } = renderHookWithQuery(() => useProfiles())
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
+    await waitFor(() => expect(result.current).not.toBeNull())
     expect(result.current.profiles).toEqual([fixture])
     expect(result.current.selectedId).toBe('1')
-    expect(result.current.error).toBe(null)
-  })
-
-  it('captures errors from list_profiles into state', async () => {
-    mockInvoke.mockRejectedValueOnce({ kind: 'Io', message: 'boom' })
-
-    const { result } = renderHook(() => useProfiles())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
-    expect(result.current.error).toBe('boom')
-    expect(result.current.profiles).toEqual([])
   })
 
   it('create appends the returned profile and selects it', async () => {
     mockInvoke.mockResolvedValueOnce([])
-    const { result } = renderHook(() => useProfiles())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useProfiles())
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     const created = profileFixture({ id: '2', name: 'Work', slug: 'work' })
     mockInvoke.mockResolvedValueOnce(created)
@@ -69,15 +56,15 @@ describe('useProfiles', () => {
       })
     })
 
-    expect(result.current.profiles).toEqual([created])
+    await waitFor(() => expect(result.current.profiles).toEqual([created]))
     expect(result.current.selectedId).toBe('2')
   })
 
   it('update replaces the matching profile by id', async () => {
     const original = profileFixture()
     mockInvoke.mockResolvedValueOnce([original])
-    const { result } = renderHook(() => useProfiles())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useProfiles())
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     const updated = { ...original, name: 'Renamed', slug: 'renamed' }
     mockInvoke.mockResolvedValueOnce(updated)
@@ -86,14 +73,14 @@ describe('useProfiles', () => {
       await result.current.update({ id: '1', patch: { name: 'Renamed' } })
     })
 
-    expect(result.current.profiles).toEqual([updated])
+    await waitFor(() => expect(result.current.profiles).toEqual([updated]))
   })
 
   it('remove drops the profile and clears selection when it was selected', async () => {
     const fixture = profileFixture()
     mockInvoke.mockResolvedValueOnce([fixture])
-    const { result } = renderHook(() => useProfiles())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useProfiles())
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     mockInvoke.mockResolvedValueOnce(undefined)
 
@@ -101,15 +88,15 @@ describe('useProfiles', () => {
       await result.current.remove({ id: '1', moveToTrash: true })
     })
 
-    expect(result.current.profiles).toEqual([])
+    await waitFor(() => expect(result.current.profiles).toEqual([]))
     expect(result.current.selectedId).toBe(null)
   })
 
   it('toggle replaces the profile with the server response', async () => {
     const original = profileFixture()
     mockInvoke.mockResolvedValueOnce([original])
-    const { result } = renderHook(() => useProfiles())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useProfiles())
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     const toggled = { ...original, surfaces: { gui: false, cli: true } }
     mockInvoke.mockResolvedValueOnce(toggled)
@@ -118,6 +105,6 @@ describe('useProfiles', () => {
       await result.current.toggle({ id: '1', surface: 'gui', enabled: false })
     })
 
-    expect(result.current.profiles[0].surfaces).toEqual({ gui: false, cli: true })
+    await waitFor(() => expect(result.current.profiles[0].surfaces).toEqual({ gui: false, cli: true }))
   })
 })

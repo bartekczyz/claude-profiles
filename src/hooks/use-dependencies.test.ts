@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
-import { renderHook, waitFor } from '@testing-library/react'
+import { waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { renderHookWithQuery } from '@/test/render-with-query'
 
 import { useDependencies } from './use-dependencies'
 
@@ -19,8 +21,8 @@ describe('useDependencies', () => {
       claudeCliInstalled: true,
       localBinOnPath: true,
     })
-    const { result } = renderHook(() => useDependencies())
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    const { result } = renderHookWithQuery(() => useDependencies())
+    await waitFor(() => expect(result.current).not.toBeNull())
     expect(result.current.deps).toEqual({
       claudeAppInstalled: true,
       claudeCliInstalled: true,
@@ -34,15 +36,8 @@ describe('useDependencies', () => {
       claudeCliInstalled: false,
       localBinOnPath: false,
     })
-    const { result } = renderHook(() => useDependencies())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.deps?.claudeAppInstalled).toBe(false)
-  })
-
-  it('surfaces errors', async () => {
-    mockInvoke.mockRejectedValueOnce({ kind: 'Io', message: 'shell failed' })
-    const { result } = renderHook(() => useDependencies())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.error).toBe('shell failed')
+    const { result } = renderHookWithQuery(() => useDependencies())
+    await waitFor(() => expect(result.current).not.toBeNull())
+    expect(result.current.deps.claudeAppInstalled).toBe(false)
   })
 })

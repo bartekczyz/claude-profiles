@@ -1,52 +1,40 @@
-import type { AppError, ExistingInstallInfo, ImportExistingInput, Profile } from '@/lib/types'
+import type { ExistingInstallInfo, ImportExistingInput, Profile } from '@/lib/types'
 
-import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 
 import { detectExistingClaudeInstall, importExistingInstall } from '@/lib/commands'
+import { queryKeys } from '@/lib/query/keys'
 
 type UseMigrationResult = {
-  existing: ExistingInstallInfo | null
-  loading: boolean
-  error: string | null
+  existing: ExistingInstallInfo
   anyDetected: boolean
   import: (input: ImportExistingInput) => Promise<Profile>
   refresh: () => Promise<void>
 }
 
 export function useMigration(): UseMigrationResult {
-  const [existing, setExisting] = useState<ExistingInstallInfo | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.migration.existing,
+    queryFn: detectExistingClaudeInstall,
+  })
 
-  async function refresh() {
-    setError(null)
-    try {
-      const info = await detectExistingClaudeInstall()
-      setExisting(info)
-    } catch (caught) {
-      setError((caught as AppError).message ?? String(caught))
-    }
-  }
+  const importMutation = useMutation({
+    mutationFn: importExistingInstall,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.migration.backups })
+    },
+  })
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh is intentionally only called on mount
-  useEffect(() => {
-    void refresh().finally(() => {
-      setLoading(false)
-    })
-  }, [])
-
-  async function performImport(input: ImportExistingInput) {
-    return importExistingInstall(input)
-  }
-
-  const anyDetected = existing !== null && (existing.claudeDesktopPath !== null || existing.claudeCodePath !== null)
+  const anyDetected = data.claudeDesktopPath !== null || data.claudeCodePath !== null
 
   return {
-    existing,
-    loading,
-    error,
+    existing: data,
     anyDetected,
-    import: performImport,
-    refresh,
+    import: (input) => importMutation.mutateAsync(input),
+    refresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.migration.existing })
+    },
   }
 }
