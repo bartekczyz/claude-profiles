@@ -1,33 +1,45 @@
-import type { Profile, ProfilePaths, Surface } from '@/lib/types'
+import type { Profile, Surface } from '@/lib/types'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
-import { Button } from '@/design/ui/button'
-import { copyToClipboard, profilePaths as fetchProfilePaths, openInFinder, openProfileInApp } from '@/lib/commands'
+// cross-feature: detail pane reads dependency state to drive surface-card status lines
+import { useDependencies } from '@/features/dependencies/api/use-dependencies'
+import { copyToClipboard, openInFinder, openProfileInApp } from '@/lib/commands'
 
+import { useProfilePaths } from '../api/use-profile-paths'
 import { DeepLinkInfo } from './deep-link-info'
-import { SurfaceCard } from './surface-card'
+import { ProfileDetailDangerLink } from './profile-detail-danger-link'
+import { ProfileDetailHeader } from './profile-detail-header'
+import { ProfileDetailHintStrip } from './profile-detail-hint-strip'
+import { ProfileDetailRecentActivity } from './profile-detail-recent-activity'
+import { ProfileDetailSurfaceCard } from './profile-detail-surface-card'
 
 type Props = {
   profile: Profile
   onEdit: () => void
   onDelete: () => void
+  // Kept for future use (the More menu in Phase 11 wires it back in); the
+  // surface card stays read-only for enable/disable in this phase.
   onToggle: (surface: Surface, enabled: boolean) => Promise<void>
 }
 
-export function ProfileDetail({ profile, onEdit, onDelete, onToggle }: Props) {
-  const [paths, setPaths] = useState<ProfilePaths | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
+function shorten(absolutePath: string): string {
+  const home = absolutePath.match(/^\/Users\/[^/]+/)?.[0]
+  if (home && absolutePath.startsWith(home)) {
+    return `~${absolutePath.slice(home.length)}`
+  }
+  return absolutePath
+}
 
-  useEffect(() => {
-    setPaths(null)
-    setActionError(null)
-    fetchProfilePaths(profile.id)
-      .then(setPaths)
-      .catch((caught) => {
-        setActionError(caught instanceof Error ? caught.message : String(caught))
-      })
-  }, [profile.id])
+function basename(filePath: string): string {
+  const slashIndex = filePath.lastIndexOf('/')
+  return slashIndex === -1 ? filePath : filePath.slice(slashIndex + 1)
+}
+
+export function ProfileDetail({ profile, onEdit, onDelete }: Props) {
+  const paths = useProfilePaths(profile.id)
+  const dependencies = useDependencies()
+  const [actionError, setActionError] = useState<string | null>(null)
 
   async function safeRun(action: () => Promise<void>) {
     try {
@@ -38,91 +50,72 @@ export function ProfileDetail({ profile, onEdit, onDelete, onToggle }: Props) {
     }
   }
 
+  const guiStatusDetail = `Launcher ready in ${shorten(paths.guiLauncherPath)}`
+  const cliStatusDetail = dependencies.deps.localBinOnPath
+    ? `Wrapper installed · ${basename(paths.cliWrapperPath)} on PATH`
+    : `Wrapper installed · PATH needs ~/.local/bin (Settings → Shell PATH)`
+  const cliStatusTone: 'success' | 'warning' = dependencies.deps.localBinOnPath ? 'success' : 'warning'
+
   return (
-    <main className="flex-1 overflow-y-auto bg-background p-6">
-      <header className="flex items-center gap-4">
-        <span className="inline-block h-10 w-10 shrink-0 rounded-xl" style={{ background: profile.color }} />
-        <div className="flex-1">
-          <h2 className="text-xl font-semibold">{profile.name}</h2>
-          <p className="text-xs text-muted-foreground">{profile.slug}</p>
+    <main className="flex flex-1 flex-col overflow-y-auto px-10 pt-10 pb-0">
+      <div className="mx-auto w-full max-w-[640px] flex-1">
+        <ProfileDetailHeader profile={profile} onEdit={onEdit} />
+
+        <div className="mb-6 grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+          <ProfileDetailSurfaceCard
+            variant="gui"
+            enabled={profile.surfaces.gui}
+            primaryLabel="Open Claude"
+            primaryKbd="⏎"
+            statusDetail={guiStatusDetail}
+            primarySuffix={profile.surfaces.gui ? <DeepLinkInfo /> : null}
+            secondaries={[
+              {
+                label: 'Reveal app',
+                kbd: '⌥1',
+                onClick: () => safeRun(() => openInFinder(paths.guiDataDir)),
+              },
+              {
+                label: 'Launcher',
+                kbd: '⌥2',
+                onClick: () => safeRun(() => openInFinder(paths.guiLauncherPath)),
+              },
+            ]}
+            onPrimary={() => safeRun(() => openProfileInApp(profile.id))}
+          />
+          <ProfileDetailSurfaceCard
+            variant="cli"
+            enabled={profile.surfaces.cli}
+            primaryLabel={
+              <>
+                Copy <code className="font-mono">claude-{profile.slug}</code>
+              </>
+            }
+            primaryKbd="⌘C"
+            statusDetail={cliStatusDetail}
+            statusTone={cliStatusTone}
+            secondaries={[
+              {
+                label: 'Config',
+                kbd: '⌥3',
+                onClick: () => safeRun(() => openInFinder(paths.cliConfigDir)),
+              },
+              {
+                label: 'Wrapper',
+                kbd: '⌥4',
+                onClick: () => safeRun(() => openInFinder(paths.cliWrapperPath)),
+              },
+            ]}
+            onPrimary={() => safeRun(() => copyToClipboard(`claude-${profile.slug}`))}
+          />
         </div>
-        <Button variant="ghost" size="sm" onClick={onEdit}>
-          Edit
-        </Button>
-      </header>
 
-      <div className="mt-6 space-y-4">
-        <SurfaceCard
-          title="Desktop App"
-          description="Launches /Applications/Claude.app with an isolated user-data directory."
-          enabled={profile.surfaces.gui}
-          onToggle={(next) => onToggle('gui', next)}
-          primaryAction={
-            profile.surfaces.gui
-              ? {
-                  label: 'Open Desktop App',
-                  onClick: () => safeRun(() => openProfileInApp(profile.id)),
-                }
-              : undefined
-          }
-          primarySuffix={profile.surfaces.gui ? <DeepLinkInfo /> : null}
-          secondaryActions={
-            profile.surfaces.gui && paths
-              ? [
-                  {
-                    label: 'Reveal data',
-                    onClick: () => safeRun(() => openInFinder(paths.guiDataDir)),
-                  },
-                  {
-                    label: 'Reveal launcher',
-                    onClick: () => safeRun(() => openInFinder(paths.guiLauncherPath)),
-                  },
-                ]
-              : undefined
-          }
-        />
+        {actionError ? <p className="mb-4 text-meta text-red">{actionError}</p> : null}
 
-        <SurfaceCard
-          title="Claude Code CLI"
-          description="Wraps the `claude` binary with CLAUDE_CONFIG_DIR pointed at this profile."
-          enabled={profile.surfaces.cli}
-          onToggle={(next) => onToggle('cli', next)}
-          primaryAction={
-            profile.surfaces.cli
-              ? {
-                  label: `Copy: claude-${profile.slug}`,
-                  onClick: () => safeRun(() => copyToClipboard(`claude-${profile.slug}`)),
-                }
-              : undefined
-          }
-          secondaryActions={
-            profile.surfaces.cli && paths
-              ? [
-                  {
-                    label: 'Reveal config',
-                    onClick: () => safeRun(() => openInFinder(paths.cliConfigDir)),
-                  },
-                  {
-                    label: 'Reveal wrapper',
-                    onClick: () => safeRun(() => openInFinder(paths.cliWrapperPath)),
-                  },
-                ]
-              : undefined
-          }
-        />
-
-        {actionError ? <p className="text-sm text-red">{actionError}</p> : null}
-
-        <section className="rounded-[10px] border border-red/40 p-4">
-          <h3 className="text-sm font-semibold text-red">Danger zone</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Deleting a profile removes its launchers and data directory.
-          </p>
-          <Button variant="ghost" size="sm" className="mt-3 text-red" onClick={onDelete}>
-            Delete profile
-          </Button>
-        </section>
+        <ProfileDetailRecentActivity />
+        <ProfileDetailDangerLink onDelete={onDelete} />
       </div>
+      <ProfileDetailHintStrip />
     </main>
   )
 }
