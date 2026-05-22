@@ -2,14 +2,16 @@ import type { ReactNode } from 'react'
 
 import { Monitor, Terminal } from 'lucide-react'
 
-import { cn, Kbd, StatusPulse } from '@/design'
+import { cn, Kbd, Skeleton, StatusPulse } from '@/design'
 
 type SurfaceVariant = 'gui' | 'cli'
 
 type SecondaryAction = {
   label: string
   kbd: string
-  onClick: () => void
+  // Omit `onClick` to render the button disabled (used during the paths
+  // fetch: labels + kbd chips stay visible so the layout doesn't shift).
+  onClick?: () => void
 }
 
 type Props = {
@@ -17,7 +19,9 @@ type Props = {
   enabled: boolean
   primaryLabel: ReactNode
   primaryKbd: string
-  statusDetail: string
+  // When `statusDetail` is undefined, the row renders a skeleton bar
+  // (used while useProfilePaths resolves on profile switches).
+  statusDetail?: string
   statusTone?: 'success' | 'warning'
   secondaries: ReadonlyArray<SecondaryAction>
   primarySuffix?: ReactNode
@@ -75,13 +79,19 @@ export function ProfileDetailSurfaceCard({
         <h3 className="text-h3 font-semibold text-ink tracking-[-0.012em]">{meta.title}</h3>
       </header>
       <p className="m-0 mb-3 text-body text-muted leading-[1.5]">{meta.description}</p>
-      <div className="mb-4 inline-flex items-center gap-1.5 text-meta font-medium tracking-[-0.003em] text-muted">
+      <div className="mb-4 flex h-[16px] items-center gap-1.5 text-meta font-medium tracking-[-0.003em] text-muted">
         {enabled ? (
           <StatusPulse tone={statusTone} />
         ) : (
           <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-muted-strong" />
         )}
-        <span>{enabled ? statusDetail : 'Surface disabled — re-enable from Edit profile'}</span>
+        {!enabled ? (
+          <span>Surface disabled — re-enable from Edit profile</span>
+        ) : statusDetail ? (
+          <span>{statusDetail}</span>
+        ) : (
+          <Skeleton shape="text" className="h-2.5 w-48" />
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <button
@@ -99,7 +109,7 @@ export function ProfileDetailSurfaceCard({
             key={action.label}
             type="button"
             onClick={action.onClick}
-            disabled={!enabled}
+            disabled={!enabled || action.onClick === undefined}
             className={cn(
               'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-cream px-2.5 text-[12px] font-medium text-ink-soft shadow-[0_1px_0_rgba(40,30,20,0.03)] outline-none transition-colors duration-(--duration-snap) ease-(--ease-natural)',
               'hover:not-disabled:border-border-strong hover:not-disabled:bg-white hover:not-disabled:text-ink',

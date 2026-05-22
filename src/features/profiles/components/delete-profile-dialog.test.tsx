@@ -27,7 +27,7 @@ describe('DeleteProfileDialog', () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn().mockResolvedValue(undefined)
     render(<DeleteProfileDialog open profile={fixture} onClose={vi.fn()} onConfirm={onConfirm} />)
-    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await user.click(screen.getByRole('button', { name: /^Delete/ }))
     expect(onConfirm).toHaveBeenCalledWith({ moveToTrash: true })
   })
 
@@ -36,7 +36,7 @@ describe('DeleteProfileDialog', () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined)
     render(<DeleteProfileDialog open profile={fixture} onClose={vi.fn()} onConfirm={onConfirm} />)
     await user.click(screen.getByLabelText(/Move the data directory to Trash/i))
-    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await user.click(screen.getByRole('button', { name: /^Delete/ }))
     expect(onConfirm).toHaveBeenCalledWith({ moveToTrash: false })
   })
 

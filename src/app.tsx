@@ -7,9 +7,9 @@ import { MigrationDialog } from '@/features/migration/components/migration-dialo
 import { PathSetupBanner } from '@/features/onboarding/components/path-setup-banner'
 import { WelcomeDialog } from '@/features/onboarding/components/welcome-dialog'
 import { useProfiles } from '@/features/profiles/api/use-profiles'
-import { CreateProfileModal } from '@/features/profiles/components/create-profile-modal'
+import { CreateProfileDialog } from '@/features/profiles/components/create-profile-dialog'
 import { DeleteProfileDialog } from '@/features/profiles/components/delete-profile-dialog'
-import { EditProfileModal } from '@/features/profiles/components/edit-profile-modal'
+import { EditProfileDialog } from '@/features/profiles/components/edit-profile-dialog'
 import { EmptyStateScreen } from '@/features/profiles/components/empty-state-screen'
 import { ProfileDetail } from '@/features/profiles/components/profile-detail'
 import { ProfileDetailSkeleton } from '@/features/profiles/components/profile-detail-skeleton'
@@ -20,7 +20,7 @@ import { SettingsViewSkeleton } from '@/features/settings/components/settings-vi
 import { useAppState } from '@/lib/app-state/use-app-state'
 import { QueryErrorBoundary } from '@/lib/query/error-boundary'
 
-type ModalState = { kind: 'none' } | { kind: 'create' } | { kind: 'edit' } | { kind: 'delete' }
+type DialogState = { kind: 'none' } | { kind: 'create' } | { kind: 'edit' } | { kind: 'delete' }
 
 type RightPane = { kind: 'profile' } | { kind: 'settings' }
 
@@ -48,7 +48,7 @@ function AppContent() {
   const migration = useMigration()
   const appState = useAppState()
   const dependencies = useDependencies()
-  const [modal, setModal] = useState<ModalState>({ kind: 'none' })
+  const [dialog, setDialog] = useState<DialogState>({ kind: 'none' })
   const [submitting, setSubmitting] = useState(false)
   const [rightPane, setRightPane] = useState<RightPane>({ kind: 'profile' })
   const [forceMigrationOpen, setForceMigrationOpen] = useState(false)
@@ -94,13 +94,26 @@ function AppContent() {
     }
   }
 
-  async function handleEdit(input: { name: string; color: string }) {
+  async function handleEdit(input: { name: string; color: string; surfaces: { gui: boolean; cli: boolean } }) {
     if (!selected) {
       return
     }
     setSubmitting(true)
     try {
-      await profiles.update({ id: selected.id, patch: input })
+      const nameChanged = input.name !== selected.name
+      const colorChanged = input.color.toLowerCase() !== selected.color.toLowerCase()
+      if (nameChanged || colorChanged) {
+        await profiles.update({
+          id: selected.id,
+          patch: { name: input.name, color: input.color },
+        })
+      }
+      if (input.surfaces.gui !== selected.surfaces.gui) {
+        await profiles.toggle({ id: selected.id, surface: 'gui', enabled: input.surfaces.gui })
+      }
+      if (input.surfaces.cli !== selected.surfaces.cli) {
+        await profiles.toggle({ id: selected.id, surface: 'cli', enabled: input.surfaces.cli })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -142,7 +155,7 @@ function AppContent() {
         />
       ) : null}
       {isEmpty ? (
-        <EmptyStateScreen onCreate={() => setModal({ kind: 'create' })} />
+        <EmptyStateScreen onCreate={() => setDialog({ kind: 'create' })} />
       ) : (
         <div className="flex min-h-0 flex-1">
           <Sidebar
@@ -152,25 +165,26 @@ function AppContent() {
               profiles.select(id)
               setRightPane({ kind: 'profile' })
             }}
-            onCreate={() => setModal({ kind: 'create' })}
+            onCreate={() => setDialog({ kind: 'create' })}
             onSettings={() => setRightPane({ kind: 'settings' })}
           />
           {/* Activity keeps the off-screen pane mounted so toggling gear ↔ profile
-              never re-fetches dependencies/backups or re-runs profile-detail effects. */}
+              never re-fetches dependencies/backups or re-runs profile-detail effects.
+              ProfileDetail manages its own Suspense for the per-profile paths fetch
+              — the header, danger link, and hint strip render with sidebar-provided
+              data immediately. */}
           <Activity mode={rightPane.kind === 'profile' && selected !== null ? 'visible' : 'hidden'}>
             {selected ? (
-              <Suspense fallback={<ProfileDetailSkeleton />}>
-                <QueryErrorBoundary>
-                  <ProfileDetail
-                    profile={selected}
-                    onEdit={() => setModal({ kind: 'edit' })}
-                    onDelete={() => setModal({ kind: 'delete' })}
-                    onToggle={async (surface, enabled) => {
-                      await profiles.toggle({ id: selected.id, surface, enabled })
-                    }}
-                  />
-                </QueryErrorBoundary>
-              </Suspense>
+              <QueryErrorBoundary>
+                <ProfileDetail
+                  profile={selected}
+                  onEdit={() => setDialog({ kind: 'edit' })}
+                  onDelete={() => setDialog({ kind: 'delete' })}
+                  onToggle={async (surface, enabled) => {
+                    await profiles.toggle({ id: selected.id, surface, enabled })
+                  }}
+                />
+              </QueryErrorBoundary>
             ) : null}
           </Activity>
           <Activity mode={rightPane.kind === 'settings' ? 'visible' : 'hidden'}>
@@ -190,27 +204,28 @@ function AppContent() {
         </div>
       )}
 
-      <CreateProfileModal
-        open={modal.kind === 'create'}
+      <CreateProfileDialog
+        open={dialog.kind === 'create'}
         dependencies={dependencies.deps}
         submitting={submitting}
-        onClose={() => setModal({ kind: 'none' })}
+        onClose={() => setDialog({ kind: 'none' })}
         onCreate={handleCreate}
       />
       {selected ? (
-        <EditProfileModal
-          open={modal.kind === 'edit'}
+        <EditProfileDialog
+          open={dialog.kind === 'edit'}
           profile={selected}
+          dependencies={dependencies.deps}
           submitting={submitting}
-          onClose={() => setModal({ kind: 'none' })}
+          onClose={() => setDialog({ kind: 'none' })}
           onSave={handleEdit}
         />
       ) : null}
       {selected ? (
         <DeleteProfileDialog
-          open={modal.kind === 'delete'}
+          open={dialog.kind === 'delete'}
           profile={selected}
-          onClose={() => setModal({ kind: 'none' })}
+          onClose={() => setDialog({ kind: 'none' })}
           onConfirm={handleDelete}
         />
       ) : null}

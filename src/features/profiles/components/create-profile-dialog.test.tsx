@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { CreateProfileModal } from './create-profile-modal'
+import { CreateProfileDialog } from './create-profile-dialog'
 
 const ALL_INSTALLED: Dependencies = {
   claudeAppInstalled: true,
@@ -12,37 +12,43 @@ const ALL_INSTALLED: Dependencies = {
   localBinOnPath: true,
 }
 
-function setup(overrides: Partial<Parameters<typeof CreateProfileModal>[0]> = {}) {
+function setup(overrides: Partial<Parameters<typeof CreateProfileDialog>[0]> = {}) {
   const onClose = vi.fn()
   const onCreate = vi.fn().mockResolvedValue(undefined)
-  render(<CreateProfileModal open dependencies={ALL_INSTALLED} onClose={onClose} onCreate={onCreate} {...overrides} />)
+  render(<CreateProfileDialog open dependencies={ALL_INSTALLED} onClose={onClose} onCreate={onCreate} {...overrides} />)
   return { onClose, onCreate, user: userEvent.setup() }
 }
 
-describe('CreateProfileModal', () => {
+describe('CreateProfileDialog', () => {
   it('disables Create when name is empty', () => {
     setup()
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Create profile/ })).toBeDisabled()
   })
 
   it('disables Create when no surfaces are selected', async () => {
     const { user } = setup()
     await user.type(screen.getByLabelText('Name'), 'Personal')
-    await user.click(screen.getByLabelText(/Desktop app/i))
-    await user.click(screen.getByLabelText(/Claude Code CLI/i))
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /Desktop App launcher/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Claude Code CLI wrapper/ }))
+    expect(screen.getByRole('button', { name: /^Create profile/ })).toBeDisabled()
   })
 
   it('enables Create with a valid name + at least one surface', async () => {
     const { user } = setup()
     await user.type(screen.getByLabelText('Name'), 'Personal')
-    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /^Create profile/ })).toBeEnabled()
+  })
+
+  it('shows a live slug preview as the user types', async () => {
+    const { user } = setup()
+    await user.type(screen.getByLabelText('Name'), 'Acme Work')
+    expect(screen.getByText('Slug: acme-work')).toBeInTheDocument()
   })
 
   it('calls onCreate with trimmed name on submit', async () => {
     const { user, onCreate, onClose } = setup()
     await user.type(screen.getByLabelText('Name'), '  Personal  ')
-    await user.click(screen.getByRole('button', { name: 'Create' }))
+    await user.click(screen.getByRole('button', { name: /^Create profile/ }))
     expect(onCreate).toHaveBeenCalledWith({
       name: 'Personal',
       color: '#d97757',
@@ -54,31 +60,31 @@ describe('CreateProfileModal', () => {
   it('surfaces backend error in the dialog without closing', async () => {
     const onCreate = vi.fn().mockRejectedValue(new Error('slug exists'))
     const onClose = vi.fn()
-    render(<CreateProfileModal open dependencies={ALL_INSTALLED} onClose={onClose} onCreate={onCreate} />)
+    render(<CreateProfileDialog open dependencies={ALL_INSTALLED} onClose={onClose} onCreate={onCreate} />)
     const user = userEvent.setup()
     await user.type(screen.getByLabelText('Name'), 'Personal')
-    await user.click(screen.getByRole('button', { name: 'Create' }))
+    await user.click(screen.getByRole('button', { name: /^Create profile/ }))
     expect(await screen.findByText('slug exists')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
   })
 })
 
-describe('CreateProfileModal — dependency awareness', () => {
+describe('CreateProfileDialog — dependency awareness', () => {
   function renderWith(deps: Dependencies) {
     const onCreate = vi.fn().mockResolvedValue(undefined)
-    render(<CreateProfileModal open dependencies={deps} onClose={vi.fn()} onCreate={onCreate} />)
+    render(<CreateProfileDialog open dependencies={deps} onClose={vi.fn()} onCreate={onCreate} />)
     return { onCreate, user: userEvent.setup() }
   }
 
   it('disables the Desktop surface when Claude.app is missing', () => {
     renderWith({ ...ALL_INSTALLED, claudeAppInstalled: false })
-    expect(screen.getByLabelText(/Desktop app launcher/i)).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /Desktop App launcher/ })).toBeDisabled()
     expect(screen.getByText(/Claude Desktop/)).toBeInTheDocument()
   })
 
   it('disables the CLI surface when claude is missing and shows the install hint', () => {
     renderWith({ ...ALL_INSTALLED, claudeCliInstalled: false })
-    expect(screen.getByLabelText(/Claude Code CLI wrapper/i)).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /Claude Code CLI wrapper/ })).toBeDisabled()
     expect(screen.getByText(/npm install -g @anthropic-ai\/claude-code/)).toBeInTheDocument()
   })
 
@@ -89,13 +95,13 @@ describe('CreateProfileModal — dependency awareness', () => {
       localBinOnPath: true,
     })
     await user.type(screen.getByLabelText('Name'), 'Personal')
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Create profile/ })).toBeDisabled()
   })
 
   it('submits only the available surface when one is missing', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
     render(
-      <CreateProfileModal
+      <CreateProfileDialog
         open
         dependencies={{ ...ALL_INSTALLED, claudeAppInstalled: false }}
         onClose={vi.fn()}
@@ -104,7 +110,7 @@ describe('CreateProfileModal — dependency awareness', () => {
     )
     const user = userEvent.setup()
     await user.type(screen.getByLabelText('Name'), 'Personal')
-    await user.click(screen.getByRole('button', { name: 'Create' }))
+    await user.click(screen.getByRole('button', { name: /^Create profile/ }))
     expect(onCreate).toHaveBeenCalledWith({
       name: 'Personal',
       color: '#d97757',
