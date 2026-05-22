@@ -2,24 +2,20 @@ import type { MigrationBackupInfo } from '@/lib/types'
 
 import { useState } from 'react'
 
-import { Button } from '@/design/ui/button'
+import { Folder } from 'lucide-react'
+
+import { Button, Kbd } from '@/design'
+import { formatBytes } from '@/lib/format-bytes'
 
 type Props = {
   backups: Array<MigrationBackupInfo>
   onDelete: (path: string) => Promise<void>
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`
-  }
-  if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+function basename(path: string): string {
+  const trimmed = path.endsWith('/') ? path.slice(0, -1) : path
+  const lastSlash = trimmed.lastIndexOf('/')
+  return lastSlash === -1 ? trimmed : trimmed.slice(lastSlash + 1)
 }
 
 function formatAge(timestampMs: number, nowMs: number): string {
@@ -30,12 +26,12 @@ function formatAge(timestampMs: number, nowMs: number): string {
     if (hours <= 0) {
       return 'just now'
     }
-    return `${hours}h ago`
+    return hours === 1 ? '1 hour old' : `${hours} hours old`
   }
   if (days === 1) {
-    return '1 day ago'
+    return '1 day old'
   }
-  return `${days} days ago`
+  return `${days} days old`
 }
 
 export function MigrationBackupsList({ backups, onDelete }: Props) {
@@ -56,38 +52,38 @@ export function MigrationBackupsList({ backups, onDelete }: Props) {
   }
 
   if (backups.length === 0) {
-    return <p className="text-sm text-muted-foreground">No migration backups on this Mac.</p>
+    return (
+      <p className="rounded-xl border border-dashed border-border-soft px-4 py-3 text-[12.5px] tracking-[-0.003em] text-muted-strong">
+        No migration backups on this Mac.
+      </p>
+    )
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {backups.map((backup) => (
         <div
           key={backup.path}
-          className="flex items-start justify-between gap-3 rounded-md border border-border bg-background p-3"
+          className="flex items-center gap-3 rounded-xl border border-border bg-white px-3.5 py-3 dark:bg-cream-2"
         >
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-xs">{backup.path}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {formatAge(backup.createdAtMs, now)} · {formatSize(backup.sizeBytes)}
-              {backup.eligibleForCleanup ? (
-                <span className="ml-2 rounded-sm bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
-                  ready to delete
-                </span>
-              ) : null}
-            </p>
-          </div>
+          <span aria-hidden className="grid h-[22px] w-[22px] shrink-0 place-items-center text-muted-strong">
+            <Folder className="h-4 w-4" strokeWidth={1.85} />
+          </span>
+          <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-ink-soft">{basename(backup.path)}</span>
+          <span className="text-[11.5px] tracking-[-0.003em] text-muted">{formatAge(backup.createdAtMs, now)}</span>
+          <span className="font-mono text-[12px] text-muted">{formatBytes(backup.sizeBytes)}</span>
           <Button
             size="sm"
-            variant="ghost"
-            onClick={() => handleDelete(backup.path)}
+            variant="danger"
+            trailingKbd={<Kbd>⌘⌫</Kbd>}
             disabled={busyPath === backup.path}
+            onClick={() => void handleDelete(backup.path)}
           >
             Delete
           </Button>
         </div>
       ))}
-      {error ? <p className="text-sm text-red">{error}</p> : null}
+      {error ? <p className="text-[11.5px] text-red">{error}</p> : null}
     </div>
   )
 }

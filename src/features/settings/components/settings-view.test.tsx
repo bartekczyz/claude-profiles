@@ -32,11 +32,18 @@ const DEFAULT_STATE = {
   themeMode: 'system' as const,
 }
 
+const DEFAULT_EXISTING = {
+  claudeDesktopPath: null,
+  claudeCodePath: null,
+  claudeDesktopSizeBytes: null,
+  claudeCodeSizeBytes: null,
+}
+
 beforeEach(() => {
   mockInvoke.mockReset()
 })
 
-// NOTE: If a future change adds a fourth hook to SettingsView (or a new IPC call
+// NOTE: If a future change adds a new hook to SettingsView (or a new IPC call
 // during the initial render), update primeInitialLoads to dispatch the new
 // command name. The dispatch-by-name pattern avoids ordering coupling.
 function primeInitialLoads({
@@ -44,11 +51,13 @@ function primeInitialLoads({
   backups = [] as Array<unknown>,
   state = DEFAULT_STATE,
   shell = 'zsh',
+  existing = DEFAULT_EXISTING,
 }: {
   deps?: unknown
   backups?: Array<unknown>
   state?: unknown
   shell?: string
+  existing?: unknown
 } = {}) {
   mockInvoke.mockImplementation(async (command: string) => {
     if (command === 'check_dependencies') {
@@ -63,105 +72,101 @@ function primeInitialLoads({
     if (command === 'detect_shell') {
       return shell
     }
+    if (command === 'detect_existing_claude_install') {
+      return existing
+    }
     throw new Error(`unexpected command in test: ${command}`)
   })
 }
 
 describe('SettingsView', () => {
-  it('renders the app version from getVersion()', async () => {
+  it('renders the app version in the footer row', async () => {
     primeInitialLoads()
     renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
-    expect(await screen.findByText(/claude-profiles 0\.1\.0/)).toBeInTheDocument()
+    expect(await screen.findByText(/claude-profiles v0\.1\.0/)).toBeInTheDocument()
   })
 
-  it('shows green checks for all-installed dependencies', async () => {
+  it('renders the System status card with one row per dependency', async () => {
     primeInitialLoads()
     renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
-    await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
-    expect(screen.getByText(/Claude Desktop: ✓ installed/)).toBeInTheDocument()
-    expect(screen.getByText(/Claude Code CLI: ✓ installed/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
+    expect(screen.getByText('Claude Code CLI')).toBeInTheDocument()
+    expect(screen.getByText('Shell PATH')).toBeInTheDocument()
   })
 
-  it('shows the empty-state for migration backups when there are none', async () => {
+  it('shows the no-backups empty card when there are none', async () => {
     primeInitialLoads({ backups: [] })
     renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
     expect(await screen.findByText(/No migration backups/)).toBeInTheDocument()
   })
 
-  it('opens migration dialog and clears prior dismissal when detect-and-import finds installs', async () => {
-    primeInitialLoads()
-    const onOpenMigration = vi.fn()
-    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
-    await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
-
-    // After initial loads, swap to one-shot mocks for the action flow.
-    mockInvoke.mockReset()
-    mockInvoke.mockImplementation(async (command: string) => {
-      if (command === 'detect_existing_claude_install') {
-        return { claudeDesktopPath: '/x/Claude', claudeCodePath: '/x/.claude' }
-      }
-      if (command === 'update_app_state') {
-        return DEFAULT_STATE
-      }
-      throw new Error(`unexpected command in test: ${command}`)
-    })
-
-    await userEvent.setup().click(screen.getByRole('button', { name: /Detect and import/ }))
-
-    await waitFor(() => expect(onOpenMigration).toHaveBeenCalled())
-    expect(mockInvoke).toHaveBeenCalledWith('update_app_state', {
-      patch: { clearMigrationDismissed: true },
-    })
-  })
-
-  it('shows the "no existing installs" message when detect returns empty', async () => {
-    primeInitialLoads()
-    const onOpenMigration = vi.fn()
-    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
-    await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
-
-    mockInvoke.mockReset()
-    mockInvoke.mockImplementation(async (command: string) => {
-      if (command === 'detect_existing_claude_install') {
-        return { claudeDesktopPath: null, claudeCodePath: null }
-      }
-      throw new Error(`unexpected command in test: ${command}`)
-    })
-
-    await userEvent.setup().click(screen.getByRole('button', { name: /Detect and import/ }))
-    expect(await screen.findByText(/No existing Claude installs detected/i)).toBeInTheDocument()
-    expect(onOpenMigration).not.toHaveBeenCalled()
-  })
-
-  it('reset button calls update_app_state with welcomeShown:false + clear flags', async () => {
-    primeInitialLoads()
-    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
-    await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
-
-    mockInvoke.mockReset()
-    mockInvoke.mockImplementation(async (command: string) => {
-      if (command === 'update_app_state') {
-        return DEFAULT_STATE
-      }
-      throw new Error(`unexpected command in test: ${command}`)
-    })
-
-    await userEvent.setup().click(screen.getByRole('button', { name: /Reset welcome and dismissal flags/ }))
-
-    expect(mockInvoke).toHaveBeenCalledWith('update_app_state', {
-      patch: {
-        welcomeShown: false,
-        clearMigrationDismissed: true,
-        clearPathBannerDismissed: true,
+  it('renders the Re-import action card when an install is detected', async () => {
+    primeInitialLoads({
+      existing: {
+        claudeDesktopPath: '/Users/me/Library/Application Support/Claude',
+        claudeCodePath: null,
+        claudeDesktopSizeBytes: 248 * 1024 * 1024,
+        claudeCodeSizeBytes: null,
       },
     })
-    expect(await screen.findByText(/Onboarding flags reset/)).toBeInTheDocument()
+    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    expect(await screen.findByText(/Detected an existing Claude install/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Re-import/ })).toBeInTheDocument()
+  })
+
+  it('hides the Re-import action card when nothing is detected', async () => {
+    primeInitialLoads()
+    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
+    expect(screen.queryByText(/Detected an existing Claude install/)).not.toBeInTheDocument()
+  })
+
+  it('Re-import button calls onOpenMigration', async () => {
+    primeInitialLoads({
+      existing: {
+        claudeDesktopPath: '/Users/me/Library/Application Support/Claude',
+        claudeCodePath: null,
+        claudeDesktopSizeBytes: null,
+        claudeCodeSizeBytes: null,
+      },
+    })
+    const onOpenMigration = vi.fn()
+    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={onOpenMigration} />)
+    await userEvent.setup().click(await screen.findByRole('button', { name: /Re-import/ }))
+    expect(onOpenMigration).toHaveBeenCalled()
+  })
+
+  it('footer reset link calls update_app_state with welcomeShown:false + clear flags and flashes a confirmation', async () => {
+    primeInitialLoads()
+    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
+
+    mockInvoke.mockReset()
+    mockInvoke.mockImplementation(async (command: string) => {
+      if (command === 'update_app_state') {
+        return DEFAULT_STATE
+      }
+      throw new Error(`unexpected command in test: ${command}`)
+    })
+
+    await userEvent.setup().click(screen.getByRole('button', { name: /Reset onboarding flags/ }))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('update_app_state', {
+        patch: {
+          welcomeShown: false,
+          clearMigrationDismissed: true,
+          clearPathBannerDismissed: true,
+        },
+      }),
+    )
+    expect(await screen.findByText(/Restart to see the welcome flow/)).toBeInTheDocument()
   })
 
   it('appearance segmented control persists the theme via update_app_state', async () => {
     primeInitialLoads()
     renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} />)
-    await waitFor(() => expect(screen.getByText(/Claude Desktop:/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
 
     mockInvoke.mockReset()
     mockInvoke.mockImplementation(async (command: string) => {

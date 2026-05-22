@@ -30,7 +30,12 @@ const variantClasses: Record<KbdVariant, string> = {
 export function Kbd({ variant = 'default', shortcutId, className, children }: KbdProps) {
   const content = shortcutId ? formatShortcut(getShortcut(shortcutId).keys) : children
   return (
+    // Kbd chips are decorative — the accompanying button label or row name
+    // already conveys the action. Hiding the chip from the a11y tree keeps
+    // accessible names tight ("Delete" rather than "Delete ⌘ Backspace") and
+    // lets buttons with trailingKbd be looked up by their visible label.
     <kbd
+      aria-hidden
       className={cn(
         'inline-flex h-[18px] min-w-[18px] items-center justify-center px-[5px] rounded-xs font-mono text-[10px] font-medium leading-none tracking-normal',
         variantClasses[variant],

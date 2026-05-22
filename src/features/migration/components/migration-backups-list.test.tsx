@@ -20,23 +20,19 @@ const FIXTURE = [
 ]
 
 describe('MigrationBackupsList', () => {
-  it('shows an empty-state message when no backups exist', () => {
+  it('shows an empty-state card when no backups exist', () => {
     render(<MigrationBackupsList backups={[]} onDelete={vi.fn().mockResolvedValue(undefined)} />)
     expect(screen.getByText(/No migration backups/i)).toBeInTheDocument()
   })
 
-  it('renders one row per backup with size and age', () => {
+  it('renders one row per backup using the path basename, size, and age', () => {
     render(<MigrationBackupsList backups={FIXTURE} onDelete={vi.fn().mockResolvedValue(undefined)} />)
-    expect(screen.getByText('/x/migration-backup-1')).toBeInTheDocument()
-    expect(screen.getByText('/x/migration-backup-2')).toBeInTheDocument()
-    expect(screen.getByText(/5\.0 MB/)).toBeInTheDocument()
-    expect(screen.getByText(/800 B/)).toBeInTheDocument()
-  })
-
-  it('shows the "ready to delete" badge only on eligible rows', () => {
-    render(<MigrationBackupsList backups={FIXTURE} onDelete={vi.fn().mockResolvedValue(undefined)} />)
-    const badges = screen.getAllByText(/ready to delete/i)
-    expect(badges).toHaveLength(1)
+    expect(screen.getByText('migration-backup-1')).toBeInTheDocument()
+    expect(screen.getByText('migration-backup-2')).toBeInTheDocument()
+    expect(screen.getByText('5.0 MB')).toBeInTheDocument()
+    expect(screen.getByText('800 B')).toBeInTheDocument()
+    expect(screen.getByText('10 days old')).toBeInTheDocument()
+    expect(screen.getByText(/1 hour old/)).toBeInTheDocument()
   })
 
   it('calls onDelete with the row path when Delete is clicked', async () => {
