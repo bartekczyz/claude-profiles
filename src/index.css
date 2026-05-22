@@ -27,4 +27,57 @@ body {
   html {
     @apply font-sans;
   }
+
+  /*
+   * Native-app posture: the window is not a web page.
+   *
+   * - Disable text selection app-wide. Selectable web text reads as a browser
+   *   affordance and breaks the desktop-app feel.
+   * - Keep selection enabled where it actually matters: inputs, textareas,
+   *   and elements explicitly opted in via `[data-selectable="true"]`
+   *   (mono detail strings inside the System / Data cards, etc.).
+   * - Cursor stays as default (not text) to reinforce that the body isn't
+   *   a document.
+   * - `overscroll-behavior: none` kills the rubber-band/bounce effect at
+   *   the edges. Desktop apps don't overscroll; the browser default makes
+   *   the whole window slide when you flick past the end of a scroll
+   *   container, which feels wrong inside a native shell.
+   */
+  html,
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+    overscroll-behavior: none;
+  }
+
+  /*
+   * Tauri drag regions need `app-region: drag` to actually move the window.
+   * The runtime injects this automatically for elements present at boot, but
+   * React-rendered nodes (like the strip in `app.tsx`) need it declared in
+   * CSS too. `-webkit-app-region` is the same property under the Safari /
+   * macOS WKWebView prefix.
+   */
+  [data-tauri-drag-region] {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+  /* Interactive descendants opt out so the drag handler doesn't swallow
+   * their clicks. (We don't currently nest interactive content inside
+   * drag regions, but documenting the escape hatch keeps future edits
+   * safe.) */
+  [data-tauri-drag-region] button,
+  [data-tauri-drag-region] input,
+  [data-tauri-drag-region] [data-tauri-drag-region="false"] {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+  input,
+  textarea,
+  [contenteditable="true"],
+  [data-selectable="true"],
+  [data-selectable="true"] * {
+    user-select: text;
+    -webkit-user-select: text;
+  }
 }

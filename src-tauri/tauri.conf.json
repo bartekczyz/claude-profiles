@@ -21,8 +21,8 @@
         "fullscreen": false,
         "transparent": true,
         "decorations": true,
-        "titleBarStyle": "Transparent",
-        "hiddenTitle": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
         "windowEffects": {
           "effects": ["sidebar"],
           "state": "followsWindowActiveState",
