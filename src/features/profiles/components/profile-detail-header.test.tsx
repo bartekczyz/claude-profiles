@@ -13,6 +13,8 @@ function fixture(overrides: Partial<Profile> = {}): Profile {
     slug: 'acme-work',
     color: '#d97757',
     createdAt: '2026-05-20T12:00:00Z',
+    lastUsedAt: null,
+
     surfaces: { gui: true, cli: true },
     ...overrides,
   }
@@ -25,9 +27,15 @@ describe('ProfileDetailHeader', () => {
     expect(screen.getByText('acme-work')).toBeInTheDocument()
   })
 
-  it('shows a placeholder for last-used until the activity log lands', () => {
+  it('renders "Never used" when lastUsedAt is null', () => {
     render(<ProfileDetailHeader profile={fixture()} onEdit={vi.fn()} />)
-    expect(screen.getByText('Last used —')).toBeInTheDocument()
+    expect(screen.getByText('Never used')).toBeInTheDocument()
+  })
+
+  it('renders a relative timestamp when lastUsedAt is set', () => {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60_000).toISOString()
+    render(<ProfileDetailHeader profile={fixture({ lastUsedAt: fiveMinutesAgo })} onEdit={vi.fn()} />)
+    expect(screen.getByText(/Last used .* ago/)).toBeInTheDocument()
   })
 
   it('Edit button wears the ⌘E chip and fires onEdit', async () => {

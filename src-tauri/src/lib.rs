@@ -1,3 +1,4 @@
+mod activity;
 mod app_state;
 mod commands;
 mod deps;
@@ -36,6 +37,8 @@ pub fn run() {
             commands::install_path_hook,
             commands::load_app_state,
             commands::update_app_state,
+            commands::list_activity,
+            commands::record_activity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

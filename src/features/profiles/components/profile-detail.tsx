@@ -4,9 +4,10 @@ import { Suspense, useState } from 'react'
 
 // cross-feature: detail pane reads dependency state to drive surface-card status lines
 import { useDependencies } from '@/features/dependencies/api/use-dependencies'
-import { copyToClipboard, openInFinder, openProfileInApp } from '@/lib/commands'
+import { openInFinder } from '@/lib/commands'
 
 import { useProfilePaths } from '../api/use-profile-paths'
+import { useProfileUsage } from '../api/use-profile-usage'
 import { DeepLinkInfo } from './deep-link-info'
 import { ProfileDetailDangerLink } from './profile-detail-danger-link'
 import { ProfileDetailHeader } from './profile-detail-header'
@@ -63,7 +64,7 @@ export function ProfileDetail({ profile, onEdit, onDelete }: Props) {
 
         {actionError ? <p className="mb-4 text-meta text-red">{actionError}</p> : null}
 
-        <ProfileDetailRecentActivity />
+        <ProfileDetailRecentActivity profileId={profile.id} />
         <ProfileDetailDangerLink onDelete={onDelete} />
       </div>
       <ProfileDetailHintStrip />
@@ -79,8 +80,9 @@ type SurfaceCardsLoadedProps = {
 function SurfaceCardsLoaded({ profile, onError }: SurfaceCardsLoadedProps) {
   const paths = useProfilePaths(profile.id)
   const dependencies = useDependencies()
+  const usage = useProfileUsage()
 
-  async function safeRun(action: () => Promise<void>) {
+  async function safeRun(action: () => Promise<unknown>) {
     try {
       await action()
       onError(null)
@@ -107,7 +109,7 @@ function SurfaceCardsLoaded({ profile, onError }: SurfaceCardsLoadedProps) {
           { label: 'Reveal app', kbd: '⌥1', onClick: () => safeRun(() => openInFinder(paths.guiDataDir)) },
           { label: 'Launcher', kbd: '⌥2', onClick: () => safeRun(() => openInFinder(paths.guiLauncherPath)) },
         ]}
-        onPrimary={() => safeRun(() => openProfileInApp(profile.id))}
+        onPrimary={() => safeRun(() => usage.launchDesktop(profile.id))}
       />
       <ProfileDetailSurfaceCard
         variant="cli"
@@ -124,13 +126,14 @@ function SurfaceCardsLoaded({ profile, onError }: SurfaceCardsLoadedProps) {
           { label: 'Config', kbd: '⌥3', onClick: () => safeRun(() => openInFinder(paths.cliConfigDir)) },
           { label: 'Wrapper', kbd: '⌥4', onClick: () => safeRun(() => openInFinder(paths.cliWrapperPath)) },
         ]}
-        onPrimary={() => safeRun(() => copyToClipboard(`claude-${profile.slug}`))}
+        onPrimary={() => safeRun(() => usage.copyCli({ profileId: profile.id, command: `claude-${profile.slug}` }))}
       />
     </>
   )
 }
 
 function SurfaceCardsFallback({ profile }: { profile: Profile }) {
+  const usage = useProfileUsage()
   return (
     <>
       <ProfileDetailSurfaceCard
@@ -143,7 +146,7 @@ function SurfaceCardsFallback({ profile }: { profile: Profile }) {
           { label: 'Reveal app', kbd: '⌥1' },
           { label: 'Launcher', kbd: '⌥2' },
         ]}
-        onPrimary={() => openProfileInApp(profile.id)}
+        onPrimary={() => usage.launchDesktop(profile.id)}
       />
       <ProfileDetailSurfaceCard
         variant="cli"
@@ -158,7 +161,7 @@ function SurfaceCardsFallback({ profile }: { profile: Profile }) {
           { label: 'Config', kbd: '⌥3' },
           { label: 'Wrapper', kbd: '⌥4' },
         ]}
-        onPrimary={() => copyToClipboard(`claude-${profile.slug}`)}
+        onPrimary={() => usage.copyCli({ profileId: profile.id, command: `claude-${profile.slug}` })}
       />
     </>
   )

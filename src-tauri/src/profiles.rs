@@ -25,6 +25,10 @@ pub struct Profile {
     pub color: String,
     pub created_at: String,
     pub surfaces: Surfaces,
+    /// Set whenever the user opens the desktop app or copies the CLI
+    /// command for this profile. `None` until the first such interaction.
+    #[serde(default)]
+    pub last_used_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,6 +136,7 @@ pub fn create(name: &str, color: &str, surfaces: Surfaces) -> AppResult<Profile>
         color: color.to_string(),
         created_at: Utc::now().to_rfc3339(),
         surfaces,
+        last_used_at: None,
     };
 
     let dir = profile_dir(&profile.id)?;
@@ -227,6 +232,7 @@ pub fn update(id: &str, patch: ProfilePatch) -> AppResult<Profile> {
         color: new_color,
         created_at: original.created_at.clone(),
         surfaces: original.surfaces.clone(),
+        last_used_at: original.last_used_at.clone(),
     };
 
     if updated.surfaces.gui {
@@ -341,6 +347,21 @@ pub fn toggle_surface(id: &str, surface: Surface, enabled: bool) -> AppResult<Pr
     Ok(profile)
 }
 
+/// Stamp `last_used_at` with the current time on the profile with the
+/// given id and persist. Returns the updated profile so callers (IPC
+/// handlers) can hand it back to the React side without an extra load.
+pub fn touch_last_used(id: &str) -> AppResult<Profile> {
+    let mut all = load()?;
+    let position = all
+        .iter()
+        .position(|profile| profile.id == id)
+        .ok_or_else(|| AppError::NotFound(format!("profile {id} not found")))?;
+    all[position].last_used_at = Some(Utc::now().to_rfc3339());
+    let updated = all[position].clone();
+    save_all(&all)?;
+    Ok(updated)
+}
+
 pub fn paths(id: &str) -> AppResult<ProfilePaths> {
     let all = load()?;
     let profile = all
@@ -397,6 +418,7 @@ mod tests {
                 gui: true,
                 cli: true,
             },
+            last_used_at: None,
         };
         let raw = serde_json::to_string(&original).unwrap();
         let parsed: Profile = serde_json::from_str(&raw).unwrap();

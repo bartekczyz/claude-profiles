@@ -170,6 +170,7 @@ pub fn import(params: ImportParams) -> AppResult<ImportOutcome> {
             gui: params.include_gui,
             cli: params.include_cli,
         },
+        last_used_at: None,
     };
 
     Ok(ImportOutcome {

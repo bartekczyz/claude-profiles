@@ -51,6 +51,10 @@ pub fn cli_config_dir(id: &str) -> AppResult<PathBuf> {
     Ok(profile_dir(id)?.join("cli-config"))
 }
 
+pub fn activity_log_path(id: &str) -> AppResult<PathBuf> {
+    Ok(profile_dir(id)?.join("activity.jsonl"))
+}
+
 pub fn claude_desktop_install_path() -> AppResult<PathBuf> {
     let home = dirs::home_dir()
         .ok_or_else(|| AppError::NotFound("could not determine user home directory".to_string()))?;

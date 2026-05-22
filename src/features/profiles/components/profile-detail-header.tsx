@@ -1,5 +1,6 @@
 import type { Profile } from '@/lib/types'
 
+import { formatDistanceToNow } from 'date-fns'
 import { MoreHorizontal } from 'lucide-react'
 
 import { Button, Kbd } from '@/design'
@@ -23,9 +24,8 @@ export function ProfileDetailHeader({ profile, onEdit, onMore }: Props) {
         <h2 className="m-0 mb-1 text-display font-bold tracking-[-0.03em] text-ink leading-[1.05]">{profile.name}</h2>
         <p className="font-mono text-[12px] tracking-[-0.005em] text-muted">
           <span>{profile.slug}</span>
-          {/* Last-used relative timestamp lands with the activity log (Phase 9). */}
           <span className="mx-2 text-border">·</span>
-          <span className="text-muted-strong">Last used —</span>
+          <span className="text-muted-strong">{formatLastUsed(profile.lastUsedAt)}</span>
         </p>
       </div>
       <div className="flex items-center gap-1 pt-1">
@@ -44,6 +44,17 @@ export function ProfileDetailHeader({ profile, onEdit, onMore }: Props) {
       </div>
     </header>
   )
+}
+
+function formatLastUsed(timestamp: string | null): string {
+  if (!timestamp) {
+    return 'Never used'
+  }
+  const parsed = new Date(timestamp)
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Never used'
+  }
+  return `Last used ${formatDistanceToNow(parsed, { addSuffix: true })}`
 }
 
 function ProfileSwatch({ color }: { color: string }) {

@@ -1,4 +1,6 @@
 import type {
+  Activity,
+  ActivityKind,
   AppState,
   AppStatePatch,
   Dependencies,
@@ -37,8 +39,20 @@ export function toggleSurface(input: { id: string; surface: Surface; enabled: bo
   return invoke<Profile>('toggle_surface', input)
 }
 
-export function openProfileInApp(id: string): Promise<void> {
-  return invoke('open_profile_in_app', { id })
+export function openProfileInApp(id: string): Promise<Profile> {
+  return invoke<Profile>('open_profile_in_app', { id })
+}
+
+export function listActivity(input: { profileId: string; limit: number }): Promise<Array<Activity>> {
+  return invoke<Array<Activity>>('list_activity', input)
+}
+
+export function recordActivity(input: {
+  profileId: string
+  kind: ActivityKind
+  metadata?: Record<string, unknown> | null
+}): Promise<Profile> {
+  return invoke<Profile>('record_activity', input)
 }
 
 export function openInFinder(path: string): Promise<void> {

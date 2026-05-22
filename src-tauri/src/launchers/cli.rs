@@ -123,6 +123,7 @@ mod tests {
                 gui: false,
                 cli: true,
             },
+            last_used_at: None,
         }
     }
 

@@ -10,6 +10,26 @@ export type Profile = {
   color: string
   createdAt: string
   surfaces: Surfaces
+  /**
+   * RFC 3339 timestamp of the last `launched_gui` or `copied_cli` event,
+   * or `null` if this profile has never been used.
+   */
+  lastUsedAt: string | null
+}
+
+export type ActivityKind =
+  | 'created'
+  | 'renamed'
+  | 'color_changed'
+  | 'surface_toggled'
+  | 'launched_gui'
+  | 'copied_cli'
+  | 'imported'
+
+export type Activity = {
+  kind: ActivityKind
+  at: string
+  metadata?: Record<string, unknown> | null
 }
 
 export type AppError = {

@@ -57,6 +57,7 @@ mod tests {
                 gui: true,
                 cli: false,
             },
+            last_used_at: None,
         }
     }
 

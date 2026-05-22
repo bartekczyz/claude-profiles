@@ -12,6 +12,8 @@ const fixture: Profile = {
   slug: 'personal',
   color: '#d97757',
   createdAt: '2026-05-20T12:00:00Z',
+  lastUsedAt: null,
+
   surfaces: { gui: true, cli: true },
 }
 
