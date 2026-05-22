@@ -2,19 +2,26 @@ import type { ExistingInstallInfo, ImportExistingInput, Profile } from '@/lib/ty
 
 import { useState } from 'react'
 
-import { Button } from '@/design/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/design/ui/dialog'
-import { Input } from '@/design/ui/input'
-import { Label } from '@/design/ui/label'
+import { Button, Dialog, Kbd, StatusDot } from '@/design'
 // cross-feature: migration dialog reuses the profile color picker for the imported profile
 import { ColorSwatchPicker } from '@/features/profiles/components/color-swatch-picker'
+import { slugifyPreview } from '@/features/profiles/components/profile-form-fields'
 import { isValidHexColor, presetColors } from '@/lib/colors'
+import { formatBytes } from '@/lib/format-bytes'
 
 type Props = {
   open: boolean
   existing: ExistingInstallInfo
   onClose: () => void
   onImport: (input: ImportExistingInput) => Promise<Profile>
+}
+
+function shorten(absolutePath: string): string {
+  const home = absolutePath.match(/^\/Users\/[^/]+/)?.[0]
+  if (home && absolutePath.startsWith(home)) {
+    return `~${absolutePath.slice(home.length)}`
+  }
+  return absolutePath
 }
 
 export function MigrationDialog({ open, existing, onClose, onImport }: Props) {
@@ -26,17 +33,13 @@ export function MigrationDialog({ open, existing, onClose, onImport }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const canSubmit = name.trim().length > 0 && isValidHexColor(color) && (includeGui || includeCli) && !submitting
+  const slugPreview = name.trim().length > 0 ? slugifyPreview(name) : ''
 
   async function handleSubmit() {
     setSubmitting(true)
     setError(null)
     try {
-      await onImport({
-        name: name.trim(),
-        color,
-        includeGui,
-        includeCli,
-      })
+      await onImport({ name: name.trim(), color, includeGui, includeCli })
       onClose()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))
@@ -46,70 +49,140 @@ export function MigrationDialog({ open, existing, onClose, onImport }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Import existing Claude install</DialogTitle>
-          <DialogDescription>
-            We found an existing Claude install on this Mac. Import it as a named profile so you don&apos;t lose
-            history.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <ul className="rounded-md border border-[color:var(--color-border)] p-3 text-xs">
+    <Dialog
+      open={open}
+      title="Import existing Claude install"
+      description="We found an existing Claude install on this Mac. Import it as a named profile so you don't lose your history."
+      onClose={onClose}
+      foot={
+        <>
+          <Button variant="ghost" size="sm" trailingKbd={<Kbd>⎋</Kbd>} disabled={submitting} onClick={onClose}>
+            Skip for now
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            trailingKbd={<Kbd variant="onOrange">⏎</Kbd>}
+            disabled={!canSubmit}
+            onClick={handleSubmit}
+          >
+            Import
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        <section>
+          <div className="mb-2 font-mono text-eyebrow font-medium uppercase tracking-[0.1em] text-muted-strong">
+            Detected
+          </div>
+          <ul className="overflow-hidden rounded-lg border border-border bg-white dark:bg-cream-2">
             {existing.claudeDesktopPath ? (
-              <li>
-                <span className="font-semibold">Claude Desktop:</span> <code>{existing.claudeDesktopPath}</code>
-              </li>
+              <DetectedRow
+                label="Claude Desktop"
+                path={existing.claudeDesktopPath}
+                sizeBytes={existing.claudeDesktopSizeBytes}
+              />
             ) : null}
             {existing.claudeCodePath ? (
-              <li className="mt-1">
-                <span className="font-semibold">Claude Code CLI:</span> <code>{existing.claudeCodePath}</code>
-              </li>
+              <DetectedRow
+                label="Claude Code CLI"
+                path={existing.claudeCodePath}
+                sizeBytes={existing.claudeCodeSizeBytes}
+              />
             ) : null}
           </ul>
-          <div className="space-y-2">
-            <Label htmlFor="migration-name">Profile name</Label>
-            <Input id="migration-name" value={name} onChange={(event) => setName(event.target.value)} autoFocus />
-          </div>
+        </section>
+
+        <div>
+          <label
+            htmlFor="migration-name"
+            className="mb-1.5 block font-mono text-[11.5px] font-medium uppercase tracking-[0.08em] text-muted"
+          >
+            Profile name
+          </label>
+          <input
+            autoFocus
+            id="migration-name"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="w-full appearance-none rounded-md border border-border bg-white px-3 py-2.5 font-sans text-[13.5px] text-ink outline-none transition-[border-color,box-shadow] duration-(--duration-snap) ease-(--ease-natural) focus:border-orange focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-orange)_15%,transparent)] dark:bg-cream-2"
+          />
+          {slugPreview ? <p className="mt-1.5 font-mono text-mono text-muted-strong">Slug: {slugPreview}</p> : null}
+        </div>
+
+        <div>
+          <div className="mb-1.5 font-mono text-[11.5px] font-medium uppercase tracking-[0.08em] text-muted">Color</div>
           <ColorSwatchPicker value={color} onChange={setColor} />
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">What to import</legend>
+        </div>
+
+        <fieldset>
+          <legend className="mb-1.5 font-mono text-[11.5px] font-medium uppercase tracking-[0.08em] text-muted">
+            What to import
+          </legend>
+          <div className="flex flex-col gap-1.5 text-body text-ink-soft">
             {existing.claudeDesktopPath ? (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={includeGui} onChange={(event) => setIncludeGui(event.target.checked)} />
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeGui}
+                  onChange={(event) => setIncludeGui(event.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer accent-orange"
+                />
                 Desktop app data (history, login)
               </label>
             ) : null}
             {existing.claudeCodePath ? (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={includeCli} onChange={(event) => setIncludeCli(event.target.checked)} />
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeCli}
+                  onChange={(event) => setIncludeCli(event.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer accent-orange"
+                />
                 Claude Code CLI config
               </label>
             ) : null}
-          </fieldset>
-          {includeCli ? (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Heads up: you&apos;ll need to log in to Claude Code once after importing. macOS Keychain keys are derived
-              from <code>CLAUDE_CONFIG_DIR</code>, so the existing credentials don&apos;t carry over.
-            </p>
-          ) : null}
-          <p className="text-xs text-muted-foreground">
-            We&apos;ll move your existing data into this profile and keep a one-shot backup under{' '}
-            <code>~/Library/Application Support/claude-profiles/migration-backup-…/</code>. You can delete the backup
-            from Settings after 7 days.
+          </div>
+        </fieldset>
+
+        {includeCli ? (
+          <p className="rounded-md border border-amber/40 bg-amber/10 px-3 py-2 text-meta text-ink-soft">
+            Heads up: you'll need to log in to Claude Code once after importing. macOS Keychain keys are derived from{' '}
+            <code className="font-mono">CLAUDE_CONFIG_DIR</code>, so the existing credentials don't carry over.
           </p>
-          {error ? <p className="text-sm text-red">{error}</p> : null}
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>
-            Skip for now
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            Import
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+        ) : null}
+
+        <p className="font-mono text-mono text-muted-strong">
+          A backup lands under <code>~/Library/Application Support/claude-profiles/migration-backup-…/</code>. Delete it
+          from Settings any time after 7 days.
+        </p>
+
+        {error ? <p className="text-meta text-red">{error}</p> : null}
+      </div>
     </Dialog>
+  )
+}
+
+type DetectedRowProps = {
+  label: string
+  path: string
+  sizeBytes: number | null
+}
+
+function DetectedRow({ label, path, sizeBytes }: DetectedRowProps) {
+  return (
+    <li className="flex items-start gap-3 border-b border-border-soft px-3.5 py-2.5 last:border-b-0">
+      <StatusDot pulse tone="success" className="mt-[7px]" />
+      <div className="min-w-0 flex-1">
+        <div className="text-body text-ink">{label}</div>
+        <div className="font-mono text-mono text-muted-strong truncate">
+          {sizeBytes !== null ? <span className="text-ink-soft">{formatBytes(sizeBytes)}</span> : null}
+          {sizeBytes !== null ? <span className="mx-1.5 text-border">·</span> : null}
+          <span>{shorten(path)}</span>
+        </div>
+      </div>
+    </li>
   )
 }

@@ -16,6 +16,11 @@ use crate::slug::slugify;
 pub struct ExistingInstall {
     pub claude_desktop_path: Option<String>,
     pub claude_code_path: Option<String>,
+    /// Bytes occupied by the desktop install dir (best-effort, walks the tree).
+    /// `None` when the corresponding path doesn't exist; permission-denied
+    /// subpaths during the walk are silently skipped.
+    pub claude_desktop_size_bytes: Option<u64>,
+    pub claude_code_size_bytes: Option<u64>,
 }
 
 impl ExistingInstall {
@@ -25,16 +30,17 @@ impl ExistingInstall {
     }
 }
 
-/// Pure: check the two well-known paths and report which exist.
-/// Production callers pass the real macOS paths; tests pass tempdir paths.
+/// Pure: check the two well-known paths, report which exist, and walk
+/// each to compute its on-disk size. Production callers pass the real
+/// macOS paths; tests pass tempdir paths.
 pub fn detect(claude_desktop_path: &Path, claude_code_path: &Path) -> ExistingInstall {
+    let desktop_exists = claude_desktop_path.exists();
+    let cli_exists = claude_code_path.exists();
     ExistingInstall {
-        claude_desktop_path: claude_desktop_path
-            .exists()
-            .then(|| claude_desktop_path.display().to_string()),
-        claude_code_path: claude_code_path
-            .exists()
-            .then(|| claude_code_path.display().to_string()),
+        claude_desktop_path: desktop_exists.then(|| claude_desktop_path.display().to_string()),
+        claude_code_path: cli_exists.then(|| claude_code_path.display().to_string()),
+        claude_desktop_size_bytes: desktop_exists.then(|| directory_size(claude_desktop_path)),
+        claude_code_size_bytes: cli_exists.then(|| directory_size(claude_code_path)),
     }
 }
 
@@ -251,7 +257,7 @@ pub fn list_backups(app_data_dir: &Path) -> AppResult<Vec<MigrationBackupInfo>> 
         backups.push(MigrationBackupInfo {
             path: path.display().to_string(),
             created_at_ms: stamp,
-            size_bytes: dir_size_bytes(&path).unwrap_or(0),
+            size_bytes: directory_size(&path),
             eligible_for_cleanup: now_ms - stamp >= SEVEN_DAYS_MS,
         });
     }
@@ -277,18 +283,28 @@ pub fn delete_backup(backup_path: &Path) -> AppResult<()> {
     Ok(())
 }
 
-fn dir_size_bytes(path: &Path) -> std::io::Result<u64> {
-    let mut total = 0;
-    for entry in fs::read_dir(path)? {
-        let entry = entry?;
-        let metadata = entry.metadata()?;
+/// Recursive size walk. Tolerant: any I/O error (typically permission denied
+/// on a system-protected subpath) is silently skipped — the caller gets a
+/// best-effort sum rather than a hard failure. Symlinks are not followed
+/// (their target bytes count once at the link site only).
+pub fn directory_size(path: &Path) -> u64 {
+    let mut total = 0u64;
+    let read = match fs::read_dir(path) {
+        Ok(read) => read,
+        Err(_) => return 0,
+    };
+    for entry in read {
+        let Ok(entry) = entry else { continue };
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
         if metadata.is_file() {
             total += metadata.len();
         } else if metadata.is_dir() {
-            total += dir_size_bytes(&entry.path()).unwrap_or(0);
+            total += directory_size(&entry.path());
         }
     }
-    Ok(total)
+    total
 }
 
 #[cfg(test)]
@@ -340,6 +356,36 @@ mod tests {
         let info = detect(&desktop, &cli);
         assert!(info.claude_desktop_path.is_some());
         assert!(info.claude_code_path.is_some());
+    }
+
+    #[test]
+    fn detect_computes_sizes_for_existing_installs() {
+        let scratch = tempdir().unwrap();
+        let desktop = scratch.path().join("Claude");
+        fs::create_dir_all(desktop.join("nested")).unwrap();
+        fs::write(desktop.join("a.json"), b"0123456789").unwrap(); // 10 bytes
+        fs::write(desktop.join("nested/b.log"), b"abc").unwrap(); // 3 bytes
+        let info = detect(&desktop, &scratch.path().join("missing"));
+        assert_eq!(info.claude_desktop_size_bytes, Some(13));
+        assert_eq!(info.claude_code_size_bytes, None);
+    }
+
+    #[test]
+    fn directory_size_returns_zero_for_missing_paths() {
+        let scratch = tempdir().unwrap();
+        assert_eq!(directory_size(&scratch.path().join("does-not-exist")), 0);
+    }
+
+    #[test]
+    fn directory_size_sums_nested_files() {
+        let scratch = tempdir().unwrap();
+        let root = scratch.path().join("root");
+        fs::create_dir_all(root.join("a/b")).unwrap();
+        fs::write(root.join("x"), b"hello").unwrap();
+        fs::write(root.join("a/y"), b"world!").unwrap();
+        fs::write(root.join("a/b/z"), b"!!").unwrap();
+        // 5 + 6 + 2 = 13
+        assert_eq!(directory_size(&root), 13);
     }
 
     fn make_source(scratch: &Path, name: &str, files: &[(&str, &str)]) -> PathBuf {

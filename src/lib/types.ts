@@ -35,6 +35,14 @@ export type ProfilePaths = {
 export type ExistingInstallInfo = {
   claudeDesktopPath: string | null
   claudeCodePath: string | null
+  /**
+   * Bytes on disk for each detected install. `null` when the corresponding
+   * path is also `null` (nothing detected); permission-denied subpaths
+   * during the walk are silently skipped on the Rust side, so the value is
+   * best-effort.
+   */
+  claudeDesktopSizeBytes: number | null
+  claudeCodeSizeBytes: number | null
 }
 
 export type ImportExistingInput = {
