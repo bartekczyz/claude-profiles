@@ -109,4 +109,22 @@ describe('useProfiles', () => {
 
     await waitFor(() => expect(result.current.profiles[0].surfaces).toEqual({ gui: false, cli: true }))
   })
+
+  it('reorder rewrites the cache in the requested sequence', async () => {
+    const a = profileFixture({ id: 'a', name: 'A', slug: 'a' })
+    const b = profileFixture({ id: 'b', name: 'B', slug: 'b' })
+    const c = profileFixture({ id: 'c', name: 'C', slug: 'c' })
+    mockInvoke.mockResolvedValueOnce([a, b, c])
+    const { result } = renderHookWithQuery(() => useProfiles())
+    await waitFor(() => expect(result.current).not.toBeNull())
+
+    mockInvoke.mockResolvedValueOnce([c, a, b])
+
+    await act(async () => {
+      await result.current.reorder(['c', 'a', 'b'])
+    })
+
+    await waitFor(() => expect(result.current.profiles.map((profile) => profile.id)).toEqual(['c', 'a', 'b']))
+    expect(mockInvoke).toHaveBeenLastCalledWith('reorder_profiles', { ids: ['c', 'a', 'b'] })
+  })
 })

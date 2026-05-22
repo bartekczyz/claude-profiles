@@ -82,6 +82,11 @@ pub fn delete_profile(id: String, move_to_trash: bool) -> AppResult<()> {
 }
 
 #[tauri::command]
+pub fn reorder_profiles(ids: Vec<String>) -> AppResult<Vec<Profile>> {
+    profiles::reorder(&ids)
+}
+
+#[tauri::command]
 pub fn toggle_surface(id: String, surface: Surface, enabled: bool) -> AppResult<Profile> {
     let profile = profiles::toggle_surface(&id, surface, enabled)?;
     record_silent(

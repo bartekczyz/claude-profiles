@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -347,6 +348,49 @@ pub fn toggle_surface(id: &str, surface: Surface, enabled: bool) -> AppResult<Pr
     Ok(profile)
 }
 
+/// Reorder profiles.json to match the given id sequence. `ids` must be
+/// a strict permutation of the existing profile ids — same count, no
+/// duplicates, no unknown ids. Returns the freshly-ordered list.
+///
+/// The display order is the canonical source for `Mod+1`..`Mod+N` (and
+/// any future positional shortcut), so a single atomic write here
+/// updates both the visible list and the keybinding indices in one go.
+pub fn reorder(ids: &[String]) -> AppResult<Vec<Profile>> {
+    let all = load()?;
+    if ids.len() != all.len() {
+        return Err(AppError::Validation(format!(
+            "expected {} ids in reorder, got {}",
+            all.len(),
+            ids.len()
+        )));
+    }
+    let mut seen = std::collections::HashSet::with_capacity(ids.len());
+    for id in ids {
+        if !seen.insert(id.as_str()) {
+            return Err(AppError::Validation(format!(
+                "duplicate id in reorder: {id}"
+            )));
+        }
+    }
+    let mut by_id: HashMap<String, Profile> = HashMap::with_capacity(all.len());
+    for profile in all {
+        by_id.insert(profile.id.clone(), profile);
+    }
+    let mut reordered = Vec::with_capacity(ids.len());
+    for id in ids {
+        match by_id.remove(id) {
+            Some(profile) => reordered.push(profile),
+            None => {
+                return Err(AppError::Validation(format!(
+                    "unknown profile id in reorder: {id}"
+                )))
+            }
+        }
+    }
+    save_all(&reordered)?;
+    Ok(reordered)
+}
+
 /// Stamp `last_used_at` with the current time on the profile with the
 /// given id and persist. Returns the updated profile so callers (IPC
 /// handlers) can hand it back to the React side without an extra load.
@@ -404,6 +448,90 @@ mod tests {
         assert!(!is_valid_hex_color("#7C3AE"));
         assert!(!is_valid_hex_color("#GGGGGG"));
         assert!(!is_valid_hex_color(""));
+    }
+
+    fn fixture_profile(id: &str, name: &str) -> Profile {
+        Profile {
+            id: id.into(),
+            name: name.into(),
+            slug: name.to_lowercase(),
+            color: "#7C3AED".into(),
+            created_at: "2026-05-20T12:00:00Z".into(),
+            surfaces: Surfaces {
+                gui: false,
+                cli: false,
+            },
+            last_used_at: None,
+        }
+    }
+
+    #[test]
+    fn reorder_writes_the_requested_permutation() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        save_all(&[
+            fixture_profile("a", "A"),
+            fixture_profile("b", "B"),
+            fixture_profile("c", "C"),
+        ])
+        .unwrap();
+
+        let reordered = reorder(&["c".into(), "a".into(), "b".into()]).unwrap();
+        assert_eq!(
+            reordered
+                .iter()
+                .map(|profile| profile.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["c", "a", "b"]
+        );
+        let persisted = load().unwrap();
+        assert_eq!(
+            persisted
+                .iter()
+                .map(|profile| profile.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["c", "a", "b"]
+        );
+        purge_for_test();
+    }
+
+    #[test]
+    fn reorder_rejects_wrong_count() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        save_all(&[fixture_profile("a", "A"), fixture_profile("b", "B")]).unwrap();
+        let err = reorder(&["a".into()]).unwrap_err();
+        match err {
+            AppError::Validation(msg) => assert!(msg.contains("got 1")),
+            other => panic!("expected Validation, got {other:?}"),
+        }
+        purge_for_test();
+    }
+
+    #[test]
+    fn reorder_rejects_duplicates() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        save_all(&[fixture_profile("a", "A"), fixture_profile("b", "B")]).unwrap();
+        let err = reorder(&["a".into(), "a".into()]).unwrap_err();
+        match err {
+            AppError::Validation(msg) => assert!(msg.contains("duplicate")),
+            other => panic!("expected Validation, got {other:?}"),
+        }
+        purge_for_test();
+    }
+
+    #[test]
+    fn reorder_rejects_unknown_id() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        save_all(&[fixture_profile("a", "A"), fixture_profile("b", "B")]).unwrap();
+        let err = reorder(&["a".into(), "ghost".into()]).unwrap_err();
+        match err {
+            AppError::Validation(msg) => assert!(msg.contains("ghost")),
+            other => panic!("expected Validation, got {other:?}"),
+        }
+        purge_for_test();
     }
 
     #[test]

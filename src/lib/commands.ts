@@ -35,6 +35,10 @@ export function deleteProfile(input: { id: string; moveToTrash: boolean }): Prom
   return invoke('delete_profile', input)
 }
 
+export function reorderProfiles(ids: Array<string>): Promise<Array<Profile>> {
+  return invoke<Array<Profile>>('reorder_profiles', { ids })
+}
+
 export function toggleSurface(input: { id: string; surface: Surface; enabled: boolean }): Promise<Profile> {
   return invoke<Profile>('toggle_surface', input)
 }

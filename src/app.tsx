@@ -260,6 +260,9 @@ function AppContent() {
             }}
             onCreate={() => setDialog({ kind: 'create' })}
             onSettings={() => setRightPane({ kind: 'settings' })}
+            onReorder={(ids) => {
+              void profiles.reorder(ids)
+            }}
           />
           {/* Activity keeps the off-screen pane mounted so toggling gear ↔ profile
               never re-fetches dependencies/backups or re-runs profile-detail effects.

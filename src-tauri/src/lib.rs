@@ -23,6 +23,7 @@ pub fn run() {
             commands::create_profile,
             commands::regenerate_launchers,
             commands::update_profile,
+            commands::reorder_profiles,
             commands::delete_profile,
             commands::toggle_surface,
             commands::open_profile_in_app,
