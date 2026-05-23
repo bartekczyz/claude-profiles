@@ -20,7 +20,7 @@ const APP_DIR_NAME: &str = "claude-profiles";
 pub fn app_data_dir() -> AppResult<PathBuf> {
     #[cfg(test)]
     {
-        return Ok(test_app_data_dir());
+        Ok(test_app_data_dir())
     }
     #[cfg(not(test))]
     {

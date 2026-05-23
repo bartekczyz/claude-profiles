@@ -89,7 +89,7 @@ pub fn read_last_n(path: &Path, limit: usize) -> AppResult<Vec<Activity>> {
     let reader = BufReader::new(file);
     let mut all: Vec<Activity> = reader
         .lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .filter_map(|line| serde_json::from_str(&line).ok())
         .collect();
     all.reverse();
@@ -127,7 +127,7 @@ fn line_count(path: &Path) -> std::io::Result<usize> {
 fn rotate(path: &Path) -> AppResult<()> {
     let file = fs::File::open(path)?;
     let reader = BufReader::new(file);
-    let mut all: Vec<String> = reader.lines().filter_map(|line| line.ok()).collect();
+    let mut all: Vec<String> = reader.lines().map_while(Result::ok).collect();
     if all.len() <= RETENTION_KEEP {
         return Ok(());
     }
