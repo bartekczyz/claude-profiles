@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 import { Activity, Suspense, useEffect, useRef, useState } from 'react'
 
 import { useHotkey } from '@tanstack/react-hotkeys'

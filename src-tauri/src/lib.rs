@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 mod activity;
 mod app_state;
 mod commands;
