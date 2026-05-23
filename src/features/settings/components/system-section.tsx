@@ -1,3 +1,4 @@
+import type { StatusTone } from '@/design'
 import type { Shell } from '@/lib/types'
 
 import { useEffect, useState } from 'react'
@@ -6,6 +7,7 @@ import { RotateCw } from 'lucide-react'
 
 import { Button, Skeleton, StatusDot } from '@/design'
 import { useDependencies } from '@/features/dependencies/api/use-dependencies'
+import { type UpdaterStatus, useUpdater } from '@/features/updater/api/use-updater'
 import { detectShell, installPathHook } from '@/lib/commands'
 
 const rcDisplay: Record<Shell, string> = {
@@ -16,8 +18,25 @@ const rcDisplay: Record<Shell, string> = {
 
 type Row = {
   label: string
-  tone: 'success' | 'warning'
+  tone: StatusTone
   detail: string
+}
+
+function describeUpdaterStatus(status: UpdaterStatus): { tone: StatusTone; detail: string } {
+  switch (status.kind) {
+    case 'idle':
+      return { tone: 'neutral', detail: '—' }
+    case 'checking':
+      return { tone: 'neutral', detail: 'Checking…' }
+    case 'up-to-date':
+      return { tone: 'success', detail: 'Up to date' }
+    case 'available':
+      return { tone: 'warning', detail: `${status.update.version} available` }
+    case 'installing':
+      return { tone: 'warning', detail: 'Installing…' }
+    case 'error':
+      return { tone: 'warning', detail: status.message }
+  }
 }
 
 // Version strings aren't surfaced from the Rust side yet (see 99-todo.md).
@@ -30,6 +49,7 @@ const REFRESH_FLASH_MS = 1500
 function buildRows(
   deps: { claudeAppInstalled: boolean; claudeCliInstalled: boolean; localBinOnPath: boolean },
   shell: Shell | null,
+  updater: { tone: StatusTone; detail: string },
 ): Array<Row> {
   return [
     {
@@ -47,17 +67,24 @@ function buildRows(
       tone: deps.localBinOnPath ? 'success' : 'warning',
       detail: shell ? rcDisplay[shell] : MISSING_DETAIL,
     },
+    {
+      label: 'Updates',
+      tone: updater.tone,
+      detail: updater.detail,
+    },
   ]
 }
 
 /**
  * Consolidated System status card.
  *
- * Three rows (Desktop / CLI / Shell PATH) sit in one rounded card. Each row
- * shows a status dot (success/warning), a label, and a mono detail string —
- * version numbers if available (currently `—` everywhere, see follow-up in
- * 99-todo.md), or the resolved rc path for the PATH row. Beneath the card
- * a hookline lets the user re-install the shell hook in one click.
+ * Four rows (Desktop / CLI / Shell PATH / Updates) sit in one rounded card.
+ * Each row shows a status dot (success/warning/neutral), a label, and a
+ * mono detail string — version numbers if available (currently `—`
+ * everywhere for deps, see follow-up in 99-todo.md), the resolved rc path
+ * for the PATH row, or the live updater status. Beneath the card a
+ * hookline lets the user re-install the shell hook in one click and an
+ * updater hookline lets them trigger a manual update check.
  *
  * The section owns its own data: `useDependencies` suspends here (not at
  * the SettingsView level) so the rest of the Settings pane can paint
@@ -65,6 +92,7 @@ function buildRows(
  */
 export function SystemSection() {
   const dependencies = useDependencies()
+  const updater = useUpdater()
   const [shell, setShell] = useState<Shell | null>(null)
   const [hookMessage, setHookMessage] = useState<string | null>(null)
   const [hookError, setHookError] = useState<string | null>(null)
@@ -120,8 +148,12 @@ export function SystemSection() {
     }
   }
 
-  const rows = buildRows(dependencies.deps, shell)
+  const updaterDescription = describeUpdaterStatus(updater.status)
+  const rows = buildRows(dependencies.deps, shell, updaterDescription)
   const hookInstalled = dependencies.deps.localBinOnPath && shell !== null
+  const updateCheckBusy = updater.status.kind === 'checking' || updater.status.kind === 'installing'
+  const updateActionLabel = updater.status.kind === 'available' ? 'Restart and install' : 'Check now'
+  const handleUpdateAction = updater.status.kind === 'available' ? updater.installAndRestart : updater.check
 
   return (
     <section className="mb-8">
@@ -179,6 +211,12 @@ export function SystemSection() {
           {hookError}
         </p>
       ) : null}
+      <div className="mt-2 flex items-center gap-2.5 font-mono text-[11px] text-muted-strong">
+        <span>{updaterDescription.detail}</span>
+        <Button size="sm" variant="ghost" disabled={updateCheckBusy} onClick={() => void handleUpdateAction()}>
+          {updateActionLabel}
+        </Button>
+      </div>
     </section>
   )
 }
