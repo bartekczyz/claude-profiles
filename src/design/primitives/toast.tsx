@@ -9,6 +9,11 @@ import { cn } from '@/design/lib/cn'
 
 type ToastTone = 'success' | 'error' | 'info'
 
+type ToastAction = {
+  label: string
+  onClick: () => void
+}
+
 type ToastItem = {
   id: string
   tone: ToastTone
@@ -16,10 +21,17 @@ type ToastItem = {
   description?: string
   /** Auto-dismiss after this many ms. Pass `null` to require explicit dismiss. */
   durationMs: number | null
+  action?: ToastAction
 }
 
 type ToastContextValue = {
-  show: (input: { tone?: ToastTone; title: string; description?: string; durationMs?: number | null }) => string
+  show: (input: {
+    tone?: ToastTone
+    title: string
+    description?: string
+    durationMs?: number | null
+    action?: ToastAction
+  }) => string
   success: (title: string, description?: string) => string
   error: (title: string, description?: string) => string
   info: (title: string, description?: string) => string
@@ -55,11 +67,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((current) => current.filter((toast) => toast.id !== id))
   }, [])
 
-  const show = useCallback<ToastContextValue['show']>(({ tone = 'info', title, description, durationMs }) => {
+  const show = useCallback<ToastContextValue['show']>(({ tone = 'info', title, description, durationMs, action }) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     setToasts((current) => [
       ...current,
-      { id, tone, title, description, durationMs: durationMs === undefined ? DEFAULT_DURATION_MS : durationMs },
+      {
+        id,
+        tone,
+        title,
+        description,
+        durationMs: durationMs === undefined ? DEFAULT_DURATION_MS : durationMs,
+        action,
+      },
     ])
     return id
   }, [])
@@ -126,6 +145,17 @@ function ToastItemRoot({ toast, onDismiss }: ToastItemRootProps) {
           >
             {toast.description}
           </ToastPrimitive.Description>
+        ) : null}
+        {toast.action ? (
+          <ToastPrimitive.Action asChild altText={toast.action.label}>
+            <button
+              type="button"
+              onClick={toast.action.onClick}
+              className="mt-2 inline-flex h-7 items-center rounded-md border border-border bg-white px-2.5 text-[11.5px] font-medium tracking-[-0.003em] text-ink outline-none transition-colors hover:bg-cream hover:text-ink focus-visible:ring-2 focus-visible:ring-ring dark:bg-cream-2 dark:hover:bg-white/[0.06]"
+            >
+              {toast.action.label}
+            </button>
+          </ToastPrimitive.Action>
         ) : null}
       </div>
       <ToastPrimitive.Close
