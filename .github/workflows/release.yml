@@ -10,13 +10,13 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'pnpm'
@@ -27,7 +27,15 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: './apps/claude-profiles/src-tauri -> target'
+
+      - name: Restore turbo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
       - name: pnpm install
         run: pnpm install --frozen-lockfile
@@ -62,9 +70,10 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
+          projectPath: apps/claude-profiles
           tagName: ${{ github.ref_name }}
           releaseName: 'claude-profiles ${{ github.ref_name }}'
-          releaseBody: 'See [CHANGELOG.md](./CHANGELOG.md) for details. Auto-update will pick this up on the next 6-hour check.'
+          releaseBody: 'See [CHANGELOG.md](./apps/claude-profiles/CHANGELOG.md) for details. Auto-update will pick this up on the next 6-hour check.'
           releaseDraft: true
           prerelease: false
           args: --target universal-apple-darwin

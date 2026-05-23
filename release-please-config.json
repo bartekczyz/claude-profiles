@@ -19,7 +19,7 @@
     { "type": "style", "hidden": true }
   ],
   "packages": {
-    ".": {
+    "apps/claude-profiles": {
       "package-name": "claude-profiles",
       "extra-files": [
         {

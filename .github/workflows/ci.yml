@@ -10,7 +10,7 @@ jobs:
   rust:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -18,45 +18,53 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: './apps/claude-profiles/src-tauri -> target'
 
       - name: cargo fmt --check
         run: cargo fmt --check
-        working-directory: src-tauri
+        working-directory: apps/claude-profiles/src-tauri
 
       - name: cargo clippy
         run: cargo clippy -- -D warnings
-        working-directory: src-tauri
+        working-directory: apps/claude-profiles/src-tauri
 
       - name: cargo test
         # State-touching tests are serialised via the cfg(test) tempdir in
         # paths.rs, so --test-threads=1 is no longer strictly required.
         # Kept as a safety net.
         run: cargo test -- --test-threads=1
-        working-directory: src-tauri
+        working-directory: apps/claude-profiles/src-tauri
 
   frontend:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Restore turbo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: pnpm install
         run: pnpm install --frozen-lockfile
 
-      - name: pnpm typecheck
-        run: pnpm typecheck
+      - name: typecheck
+        run: pnpm turbo run typecheck
 
-      - name: pnpm biome check
+      - name: biome check
         run: pnpm biome check
 
-      - name: pnpm test
-        run: pnpm test
+      - name: test
+        run: pnpm turbo run test

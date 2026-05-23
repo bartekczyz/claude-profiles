@@ -1,8 +1,8 @@
 node_modules/
 .idea/
 dist/
-src-tauri/target/
-src-tauri/gen/
+**/src-tauri/target/
+**/src-tauri/gen/
 *.tsbuildinfo
 vite.config.d.ts
 vite.config.js
@@ -10,6 +10,7 @@ plans/
 prompt.md
 prototypes/
 .agents/
+.turbo/
 
 # Signing keys — never commit. The matching public key lives inside
 # src-tauri/tauri.conf.json under plugins.updater.pubkey, so we only
