@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+        working-directory: src-tauri
+
+      - name: cargo clippy
+        run: cargo clippy -- -D warnings
+        working-directory: src-tauri
+
+      - name: cargo test
+        # State-touching tests are serialised via the cfg(test) tempdir in
+        # paths.rs, so --test-threads=1 is no longer strictly required.
+        # Kept as a safety net.
+        run: cargo test -- --test-threads=1
+        working-directory: src-tauri
+
+  frontend:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm typecheck
+        run: pnpm typecheck
+
+      - name: pnpm biome check
+        run: pnpm biome check
+
+      - name: pnpm test
+        run: pnpm test
