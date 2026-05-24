@@ -1,4 +1,4 @@
-import { ExternalLink, GitBranch, Globe } from 'lucide-react'
+import { Coffee, ExternalLink, GitBranch, Globe } from 'lucide-react'
 
 import { Button, Dialog, Kbd, useToast } from '@/design'
 import { openExternalUrl } from '@/lib/commands'
@@ -68,6 +68,12 @@ export function AboutDialog({ open, onClose }: Props) {
             <ExternalLinkRow icon={<Globe className="h-3.5 w-3.5" strokeWidth={1.85} />} url={metadata.homepage} />
           </Field>
         ) : null}
+        <Field label="Support">
+          <ExternalLinkRow
+            icon={<Coffee className="h-3.5 w-3.5" strokeWidth={1.85} />}
+            url="https://buymeacoffee.com/bartekczyz"
+          />
+        </Field>
       </dl>
       <p className="mt-5 border-t border-border-soft pt-4 text-[11.5px] text-muted-strong">
         Not affiliated with Anthropic. Claude and Claude.app are trademarks of Anthropic, PBC.

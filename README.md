@@ -28,21 +28,18 @@ pnpm --filter claude-profiles tauri build
 
 The `.dmg` lands in `apps/claude-profiles/src-tauri/target/release/bundle/dmg/`. macOS will warn on first launch because the local build isn't notarized — right-click the `.app` → Open → Open to bypass Gatekeeper.
 
-## How it works
+## Using claude-profiles
 
-claude-profiles is a thin orchestrator that uses two well-known tricks:
+Create a profile from the sidebar — give it a name, pick a colour, and choose which surfaces you want (desktop app, CLI, or both). The app generates everything you need on the spot:
 
-**For Claude Desktop:** Claude Desktop is an Electron app, so it accepts Chromium's `--user-data-dir` flag. Each profile gets a `.app` launcher in `/Applications/Claude (<Name>).app` whose shell script does:
+- **Desktop app.** A `Claude (<Name>).app` launcher lands in `/Applications`. Double-click to open Claude Desktop with that profile's account, history, and settings. Spotlight, Launchpad, Finder, and ⌘-Tab all see it as its own app, tinted with the profile colour.
+- **Claude Code CLI.** A `claude-<slug>` command appears on your `PATH`. Run `claude-work` (or whatever slug you picked) in any terminal to start Claude Code with that profile's config and login. Each profile keeps its own session and credentials.
 
-```sh
-exec open -n -a "Claude" --args --user-data-dir="$HOME/Library/Application Support/claude-profiles/profiles/<id>/gui-data"
-```
+Switch profiles from the sidebar, with ⌘1..⌘9 to jump to a slot, ⌘F to filter the list, or ⌘K to open the command palette. ⌘N creates a new profile, ⌘, opens Settings.
 
-That points Claude at a fresh data directory per profile — separate cookies, login, history, settings.
+Already using Claude Desktop or Claude Code? On first launch the app offers to import your existing setup into your first profile — no re-login required. You can rerun this later from Settings → Data → "Detect and import…".
 
-**For Claude Code CLI:** Claude Code respects `CLAUDE_CONFIG_DIR`, which relocates its config tree. On macOS, credentials live in the Keychain under a service name derived from `SHA-256(CLAUDE_CONFIG_DIR)[:8]`, so setting a different config dir per profile gives each one its own credential entry automatically. Each profile gets a wrapper at `~/.local/bin/claude-<slug>` that exports the env var and execs `claude`.
-
-The app generates both artifacts on profile create and cleans them up on delete.
+Deleting a profile from its detail view removes the launcher and CLI wrapper; the profile's data either goes to the Trash or is deleted outright, your choice.
 
 ## FAQ
 
@@ -66,6 +63,10 @@ Each profile gets a separate Keychain entry derived from its config directory. W
 
 **Why "Settings" instead of "Preferences"?**
 macOS deprecated "Preferences" in favor of "Settings" in Ventura. We follow the current convention.
+
+## Support
+
+If claude-profiles saves you time, you can [buy me a coffee](https://buymeacoffee.com/bartekczyz). It helps keep the project active — thanks!
 
 ## Not affiliated with Anthropic
 
