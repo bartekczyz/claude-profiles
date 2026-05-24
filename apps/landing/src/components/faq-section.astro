@@ -7,6 +7,7 @@ import { faqEntries } from '../data/faq'
     <details
       class="group border-t border-border py-[18px] last:border-b"
       data-faq-index={index}
+      open={index === 0}
     >
       <summary class="m-0 flex cursor-pointer list-none items-center justify-between text-[15px] font-medium leading-[1.4]">
         {entry.question}
