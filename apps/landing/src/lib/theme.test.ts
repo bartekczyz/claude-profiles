@@ -12,6 +12,6 @@ describe('themeScript', () => {
   })
 
   it('falls back to light on error', () => {
-    expect(themeScript).toContain("setAttribute('data-theme', 'light')")
+    expect(themeScript).toContain("var theme = 'light'")
   })
 })

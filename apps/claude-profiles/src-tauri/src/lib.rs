@@ -26,20 +26,7 @@ const OPEN_ABOUT_ID: &str = "open-about";
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin({
-            // `darwin-universal` is the platform key we write into `latest.json`
-            // so a single signed universal `.dmg` serves both Apple Silicon
-            // and Intel Macs without per-arch entries. Tauri 2's updater
-            // defaults to `darwin-<arch>` so without this override an
-            // installed Intel app would only see `darwin-x86_64` entries
-            // (which we don't ship).
-            let mut builder = tauri_plugin_updater::Builder::new();
-            #[cfg(target_os = "macos")]
-            {
-                builder = builder.target("darwin-universal");
-            }
-            builder.build()
-        })
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())

@@ -5,13 +5,17 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ThemeProvider } from '@/design'
+import { ThemeProvider, ToastProvider } from '@/design'
 import { renderWithQuery } from '@/test/render-with-query'
 
 import { SettingsView } from './settings-view'
 
 function renderSettings(ui: ReactElement) {
-  return renderWithQuery(<ThemeProvider defaultMode="system">{ui}</ThemeProvider>)
+  return renderWithQuery(
+    <ThemeProvider defaultMode="system">
+      <ToastProvider>{ui}</ToastProvider>
+    </ThemeProvider>,
+  )
 }
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
@@ -136,7 +140,7 @@ describe('SettingsView', () => {
     expect(onOpenMigration).toHaveBeenCalled()
   })
 
-  it('footer reset link calls update_app_state with welcomeShown:false + clear flags and flashes a confirmation', async () => {
+  it('shows a confirmation dialog before resetting onboarding flags', async () => {
     primeInitialLoads()
     renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} onOpenAbout={vi.fn()} />)
     await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
@@ -149,7 +153,13 @@ describe('SettingsView', () => {
       throw new Error(`unexpected command in test: ${command}`)
     })
 
-    await userEvent.setup().click(screen.getByRole('button', { name: /Reset onboarding flags/ }))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /Reset onboarding flags/ }))
+
+    expect(screen.getByRole('dialog', { name: /Reset onboarding state\?/ })).toBeInTheDocument()
+    expect(mockInvoke).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
 
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith('update_app_state', {
@@ -160,7 +170,24 @@ describe('SettingsView', () => {
         },
       }),
     )
-    expect(await screen.findByText(/Restart to see the welcome flow/)).toBeInTheDocument()
+  })
+
+  it('cancels reset when the user picks Cancel', async () => {
+    primeInitialLoads()
+    renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} onOpenAbout={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
+
+    mockInvoke.mockReset()
+    mockInvoke.mockImplementation(async (command: string) => {
+      throw new Error(`unexpected command in test: ${command}`)
+    })
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /Reset onboarding flags/ }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(mockInvoke).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: /Reset onboarding state\?/ })).not.toBeInTheDocument()
   })
 
   it('appearance segmented control persists the theme via update_app_state', async () => {

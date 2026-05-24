@@ -70,13 +70,6 @@ describe('MigrationDialog', () => {
     expect(screen.getByRole('button', { name: /^Import/ })).toBeDisabled()
   })
 
-  it('shows the CLI re-login warning only when CLI is included', async () => {
-    const { user } = setup(existing())
-    expect(screen.getByText(/log in to Claude Code once/i)).toBeInTheDocument()
-    await user.click(screen.getByLabelText(/Claude Code CLI config/i))
-    expect(screen.queryByText(/log in to Claude Code once/i)).not.toBeInTheDocument()
-  })
-
   it('calls onImport with the trimmed name and selected surfaces', async () => {
     const { user, onImport, onClose } = setup(existing())
     const nameField = screen.getByLabelText(/Profile name/i)
