@@ -408,7 +408,6 @@ function AppContent() {
                   onClose={() => setRightPane({ kind: 'profile' })}
                   onOpenMigration={async () => {
                     await migration.refresh()
-                    setRightPane({ kind: 'profile' })
                     setForceMigrationOpen(true)
                   }}
                   onOpenAbout={() => setDialog({ kind: 'about' })}
