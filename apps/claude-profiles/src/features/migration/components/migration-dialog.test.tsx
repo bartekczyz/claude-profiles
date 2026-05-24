@@ -46,6 +46,15 @@ describe('MigrationDialog', () => {
     expect(screen.getByLabelText(/Profile name/i)).toHaveValue('Default')
   })
 
+  it('disables iOS-style autocomplete on the profile name input', () => {
+    setup(existing())
+    const input = screen.getByLabelText(/Profile name/i)
+    expect(input).toHaveAttribute('autoComplete', 'off')
+    expect(input).toHaveAttribute('autoCorrect', 'off')
+    expect(input).toHaveAttribute('autoCapitalize', 'off')
+    expect(input).toHaveAttribute('spellCheck', 'false')
+  })
+
   it('pre-checks every detected surface', () => {
     setup(existing())
     expect(screen.getByLabelText(/Desktop app data/i)).toBeChecked()

@@ -22,9 +22,10 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'text-white border-0 bg-[linear-gradient(180deg,var(--color-orange),var(--color-orange-deep))] shadow-[0_1px_2px_rgba(191,98,64,0.35),inset_0_1px_0_rgba(255,255,255,0.2)] hover:not-disabled:brightness-[0.96] active:not-disabled:translate-y-px',
   secondary:
-    'text-ink-soft bg-cream border border-border hover:not-disabled:bg-white hover:not-disabled:border-border-strong hover:not-disabled:text-ink shadow-[0_1px_0_rgba(40,30,20,0.03)]',
+    'text-ink-soft bg-cream border border-border hover:not-disabled:bg-white hover:not-disabled:border-border-strong hover:not-disabled:text-ink dark:hover:not-disabled:bg-cream-3 shadow-[0_1px_0_rgba(40,30,20,0.03)]',
   ghost: 'text-muted bg-transparent border-0 hover:not-disabled:bg-cream-2 hover:not-disabled:text-ink',
-  danger: 'text-red bg-cream border border-border hover:not-disabled:border-red/45 hover:not-disabled:bg-white',
+  danger:
+    'text-red bg-cream border border-border hover:not-disabled:border-red/45 hover:not-disabled:bg-white dark:hover:not-disabled:bg-cream-3',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
