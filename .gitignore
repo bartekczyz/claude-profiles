@@ -13,6 +13,10 @@ prototypes/
 .turbo/
 .superpowers/
 
+# Source icon assets — only icon.svg is copied into apps/landing/public/.
+# The other formats (.ico, .icns, .png) are not needed in the repo.
+/icons/
+
 # Signing keys — never commit. The matching public key lives inside
 # src-tauri/tauri.conf.json under plugins.updater.pubkey, so we only
 # need to keep the private key from leaking. The .key.pub allowance is
