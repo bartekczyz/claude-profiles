@@ -1,0 +1,11 @@
+---
+interface Props {
+  name: string
+  color: string // a CSS variable reference, e.g. "var(--color-profile-orange)"
+}
+const { name, color } = Astro.props
+---
+<span class="inline-flex items-center gap-1.5 align-baseline rounded-full border border-border bg-cream px-2 py-px text-[0.92em]">
+  <span class="size-2.5 rounded-full" style={`background: ${color}; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.1);`}></span>
+  <span>{name}</span>
+</span>

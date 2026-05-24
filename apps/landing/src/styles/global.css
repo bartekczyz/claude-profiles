@@ -4,6 +4,14 @@
 @import "@fontsource-variable/geist/index.css";
 @import "@fontsource-variable/geist-mono/index.css";
 
+@utility shadow-button-primary {
+  box-shadow: var(--shadow-button-primary);
+}
+
+@utility shadow-window {
+  box-shadow: var(--shadow-window);
+}
+
 html, body {
   margin: 0;
   padding: 0;
