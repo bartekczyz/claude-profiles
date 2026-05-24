@@ -34,6 +34,10 @@ function setup(detected: ExistingInstallInfo, overrides: Partial<Parameters<type
   return { onClose, onImport, user: userEvent.setup() }
 }
 
+function renderMigrationDialog() {
+  setup(existing())
+}
+
 describe('MigrationDialog', () => {
   it('renders only the surfaces that were detected', () => {
     setup(existing({ claudeCodePath: null, claudeCodeSizeBytes: null }))
@@ -79,11 +83,30 @@ describe('MigrationDialog', () => {
     expect(screen.getByRole('button', { name: /^Import/ })).toBeDisabled()
   })
 
-  it('shows the CLI re-login warning only when CLI is included', async () => {
-    const { user } = setup(existing())
-    expect(screen.getByText(/log in to Claude Code once/i)).toBeInTheDocument()
-    await user.click(screen.getByLabelText(/Claude Code CLI config/i))
-    expect(screen.queryByText(/log in to Claude Code once/i)).not.toBeInTheDocument()
+  it('renders the "What will happen" explainer card', () => {
+    renderMigrationDialog()
+    expect(screen.getByRole('heading', { name: /What will happen/i })).toBeInTheDocument()
+
+    expect(
+      screen.getByText(
+        (_, node) => node?.tagName === 'LI' && /copied into the new profile dir/i.test(node?.textContent ?? ''),
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/moved to a 7-day backup/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/claude-/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/log in once/i)).toBeInTheDocument()
+  })
+
+  it('shows the resulting CLI command under the name input', () => {
+    renderMigrationDialog()
+    // The dialog mounts with `Default` as the initial name.
+    expect(screen.getByText((_, node) => node?.textContent === 'claude-default')).toBeInTheDocument()
+  })
+
+  it('renames the cancel/skip footer button to "Cancel"', () => {
+    renderMigrationDialog()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Skip for now' })).not.toBeInTheDocument()
   })
 
   it('calls onImport with the trimmed name and selected surfaces', async () => {
