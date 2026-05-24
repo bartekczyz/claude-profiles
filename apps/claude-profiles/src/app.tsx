@@ -216,6 +216,20 @@ function AppContent() {
     { enabled: !overlayOpen },
   )
 
+  // ⌘F focuses the sidebar profile-filter input. Gated on the sidebar
+  // being mounted (empty-state owns the whole window with no sidebar)
+  // and no overlay being on top.
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const sidebarVisible = profiles.profiles.length > 0
+  useShortcut(
+    'focus-search',
+    () => {
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+    },
+    { enabled: !overlayOpen && sidebarVisible },
+  )
+
   // Detail-scope shortcuts — gated on a profile being selected, the
   // detail pane being on top, and no overlay (dialog/palette/migration)
   // covering it.
@@ -350,6 +364,7 @@ function AppContent() {
           <Sidebar
             profiles={profiles.profiles}
             selectedId={profiles.selectedId}
+            searchInputRef={searchInputRef}
             onSelect={(id) => {
               profiles.select(id)
               setRightPane({ kind: 'profile' })

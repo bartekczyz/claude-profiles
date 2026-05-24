@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import type { Profile } from '@/lib/types'
 
 import { useState } from 'react'
@@ -43,6 +44,7 @@ const restrictToScrollableAncestor: Modifier = ({ transform, draggingNodeRect, s
 type Props = {
   profiles: Array<Profile>
   selectedId: string | null
+  searchInputRef?: Ref<HTMLInputElement>
   onSelect: (id: string) => void
   onCreate: () => void
   onSettings: () => void
@@ -54,7 +56,7 @@ type Props = {
   onReorder?: (ids: Array<string>) => void
 }
 
-export function Sidebar({ profiles, selectedId, onSelect, onCreate, onSettings, onReorder }: Props) {
+export function Sidebar({ profiles, selectedId, searchInputRef, onSelect, onCreate, onSettings, onReorder }: Props) {
   const [query, setQuery] = useState('')
   const filtered =
     query.trim().length === 0
@@ -92,7 +94,7 @@ export function Sidebar({ profiles, selectedId, onSelect, onCreate, onSettings, 
   return (
     <aside className="relative flex w-64 shrink-0 flex-col border-r border-border bg-cream-2 px-3 pt-11 pb-3">
       <SidebarBrandMark />
-      <SidebarSearchInput value={query} onChange={setQuery} />
+      <SidebarSearchInput value={query} inputRef={searchInputRef} onChange={setQuery} />
       <div className="px-2.5 pt-1.5 pb-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.1em] text-muted-strong">
         Profiles
       </div>

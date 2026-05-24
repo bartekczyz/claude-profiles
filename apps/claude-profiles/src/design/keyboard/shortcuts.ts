@@ -35,6 +35,10 @@ export const shortcuts = {
     keys: 'Mod+,',
     meta: { name: 'Toggle settings', description: 'Open or close the Settings pane', scope: 'global' },
   },
+  'focus-search': {
+    keys: 'Mod+F',
+    meta: { name: 'Focus search', description: 'Focus the sidebar profile-filter input', scope: 'global' },
+  },
   'open-detect-import': {
     keys: 'Mod+I',
     meta: { name: 'Detect and import', description: 'Open the migration dialog', scope: 'global' },
