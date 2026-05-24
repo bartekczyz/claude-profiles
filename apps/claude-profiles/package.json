@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@babel/core": "7.29.0",
+    "@claude-profiles/design-tokens": "workspace:*",
     "@claude-profiles/tsconfig": "workspace:*",
     "@rolldown/plugin-babel": "0.2.3",
     "@tailwindcss/vite": "4.3.0",

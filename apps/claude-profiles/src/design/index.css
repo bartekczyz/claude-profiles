@@ -7,7 +7,7 @@
 
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
-@import "./tokens.css";
+@import "@claude-profiles/design-tokens/tokens.css";
 
 /* The dark variant fires when the runtime sets [data-theme="dark"] on the
    <html> element. ThemeProvider handles the system-preference mirror so a

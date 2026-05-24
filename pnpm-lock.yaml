@@ -102,6 +102,9 @@ importers:
       '@babel/core':
         specifier: 7.29.0
         version: 7.29.0
+      '@claude-profiles/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@claude-profiles/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -150,6 +153,8 @@ importers:
       vitest:
         specifier: 4.1.7
         version: 4.1.7(@types/node@25.9.1)(happy-dom@20.9.0)(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@8.0.13(@types/node@25.9.1)(jiti@2.7.0))
+
+  packages/design-tokens: {}
 
   packages/tsconfig: {}
 
