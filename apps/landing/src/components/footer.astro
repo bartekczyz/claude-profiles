@@ -1,8 +1,9 @@
 ---
+import { desktopVersion } from '../lib/version'
 ---
 <footer class="mt-auto w-full border-t border-border">
   <div class="mx-auto flex max-w-[1080px] items-baseline justify-between px-14 py-8 text-xs text-muted">
-    <span>claude-profiles  ·  <span id="footer-version">v1.0</span>  ·  MIT</span>
+    <span>claude-profiles  ·  <span id="footer-version">{desktopVersion}</span>  ·  MIT</span>
     <span class="flex gap-2">
       <a href="https://github.com/bartekczyz/claude-profiles" class="underline decoration-border-strong underline-offset-4 hover:decoration-ink">GitHub</a>
       <span>·</span>

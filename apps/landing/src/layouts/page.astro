@@ -3,6 +3,7 @@ import '../styles/global.css'
 
 import { faqPageLd, softwareApplicationLd } from '../lib/seo'
 import { themeScript } from '../lib/theme'
+import { desktopVersion } from '../lib/version'
 
 interface Props {
   title: string
@@ -13,9 +14,10 @@ const { title, description } = Astro.props
 const rawSiteUrl = (Astro.site ?? new URL('https://claude-profiles.vercel.app')).toString()
 const siteUrl = rawSiteUrl.endsWith('/') ? rawSiteUrl.slice(0, -1) : rawSiteUrl
 const ogImage = `${siteUrl}/og-image.png`
-// JSON-LD is SSR-rendered for crawlers; Phase 6's runtime release fetch
-// doesn't reach it. Hardcoded for v1; revisit if dynamic SSR is wired.
-const swLd = JSON.stringify(softwareApplicationLd({ siteUrl, version: 'v1.0.0' }))
+// JSON-LD is SSR-rendered for crawlers; Phase 6's runtime release
+// fetch doesn't reach it. Version sourced from the desktop app's
+// package.json at build time (release-please keeps it in sync).
+const swLd = JSON.stringify(softwareApplicationLd({ siteUrl, version: desktopVersion }))
 const faqLd = JSON.stringify(faqPageLd())
 ---
 
