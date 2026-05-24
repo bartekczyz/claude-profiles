@@ -1,0 +1,28 @@
+---
+import { faqEntries } from '../data/faq'
+---
+<section aria-labelledby="faq-heading" class="mx-auto max-w-[680px] px-4 pt-8 pb-12 sm:px-14">
+  <h2 id="faq-heading" class="m-0 mb-[18px] text-[22px] font-semibold tracking-[-0.014em]">Frequently asked questions</h2>
+  {faqEntries.map((entry, index) => (
+    <details
+      class="group border-t border-border py-[18px] last:border-b"
+      data-faq-index={index}
+    >
+      <summary class="m-0 flex cursor-pointer list-none items-center justify-between text-[15px] font-medium leading-[1.4]">
+        {entry.question}
+        <span class="text-lg font-normal text-muted transition-transform group-open:rotate-45">+</span>
+      </summary>
+      <p class="mt-2.5 text-[14.5px] leading-[1.6] text-ink-soft">{entry.answer}</p>
+    </details>
+  ))}
+</section>
+
+<script is:inline>
+  for (const item of document.querySelectorAll('details[data-faq-index]')) {
+    item.addEventListener('toggle', () => {
+      if (item.open) {
+        window.dispatchEvent(new CustomEvent('faq:open', { detail: { index: Number(item.getAttribute('data-faq-index')) } }))
+      }
+    })
+  }
+</script>

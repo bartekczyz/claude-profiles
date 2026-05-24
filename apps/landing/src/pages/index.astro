@@ -1,7 +1,10 @@
 ---
+import FaqSection from '../components/faq-section.astro'
 import FinderMockup from '../components/finder-mockup.astro'
 import Footer from '../components/footer.astro'
 import Hero from '../components/hero.astro'
+import HowItWorks from '../components/how-it-works.astro'
+import InstallSection from '../components/install-section.astro'
 import TerminalStrip from '../components/terminal-strip.astro'
 import TopBar from '../components/top-bar.astro'
 import PageLayout from '../layouts/page.astro'
@@ -16,7 +19,9 @@ import PageLayout from '../layouts/page.astro'
     <Hero />
     <FinderMockup />
     <TerminalStrip />
-    <p class="mt-12 text-center text-sm text-muted">Sections continue in phase 5.</p>
+    <HowItWorks />
+    <InstallSection />
+    <FaqSection />
   </main>
   <Footer />
 </PageLayout>
