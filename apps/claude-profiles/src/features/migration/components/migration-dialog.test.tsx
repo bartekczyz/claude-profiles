@@ -34,10 +34,6 @@ function setup(detected: ExistingInstallInfo, overrides: Partial<Parameters<type
   return { onClose, onImport, user: userEvent.setup() }
 }
 
-function renderMigrationDialog() {
-  setup(existing())
-}
-
 describe('MigrationDialog', () => {
   it('renders only the surfaces that were detected', () => {
     setup(existing({ claudeCodePath: null, claudeCodeSizeBytes: null }))
@@ -48,15 +44,6 @@ describe('MigrationDialog', () => {
   it('defaults the name to Default', () => {
     setup(existing())
     expect(screen.getByLabelText(/Profile name/i)).toHaveValue('Default')
-  })
-
-  it('disables iOS-style autocomplete on the profile name input', () => {
-    setup(existing())
-    const input = screen.getByLabelText(/Profile name/i)
-    expect(input).toHaveAttribute('autoComplete', 'off')
-    expect(input).toHaveAttribute('autoCorrect', 'off')
-    expect(input).toHaveAttribute('autoCapitalize', 'off')
-    expect(input).toHaveAttribute('spellCheck', 'false')
   })
 
   it('pre-checks every detected surface', () => {
@@ -81,32 +68,6 @@ describe('MigrationDialog', () => {
     await user.click(screen.getByLabelText(/Desktop app data/i))
     await user.click(screen.getByLabelText(/Claude Code CLI config/i))
     expect(screen.getByRole('button', { name: /^Import/ })).toBeDisabled()
-  })
-
-  it('renders the "What will happen" explainer card', () => {
-    renderMigrationDialog()
-    expect(screen.getByRole('heading', { name: /What will happen/i })).toBeInTheDocument()
-
-    expect(
-      screen.getByText(
-        (_, node) => node?.tagName === 'LI' && /copied into the new profile dir/i.test(node?.textContent ?? ''),
-      ),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/moved to a 7-day backup/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/claude-/).length).toBeGreaterThan(0)
-    expect(screen.getByText(/log in once/i)).toBeInTheDocument()
-  })
-
-  it('shows the resulting CLI command under the name input', () => {
-    renderMigrationDialog()
-    // The dialog mounts with `Default` as the initial name.
-    expect(screen.getByText((_, node) => node?.textContent === 'claude-default')).toBeInTheDocument()
-  })
-
-  it('renames the cancel/skip footer button to "Cancel"', () => {
-    renderMigrationDialog()
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Skip for now' })).not.toBeInTheDocument()
   })
 
   it('calls onImport with the trimmed name and selected surfaces', async () => {

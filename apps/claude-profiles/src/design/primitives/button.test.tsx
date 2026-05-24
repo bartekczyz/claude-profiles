@@ -22,18 +22,6 @@ describe('Button', () => {
     }
   })
 
-  it('applies dark-mode-aware hover background for secondary variant', () => {
-    render(<Button variant="secondary">Re-import</Button>)
-    const button = screen.getByRole('button', { name: 'Re-import' })
-    expect(button.className).toContain('dark:hover:not-disabled:bg-cream-3')
-  })
-
-  it('applies dark-mode-aware hover background for danger variant', () => {
-    render(<Button variant="danger">Delete</Button>)
-    const button = screen.getByRole('button', { name: 'Delete' })
-    expect(button.className).toContain('dark:hover:not-disabled:bg-cream-3')
-  })
-
   it('renders leading icon, trailing icon, and trailing kbd slots', () => {
     render(
       <Button

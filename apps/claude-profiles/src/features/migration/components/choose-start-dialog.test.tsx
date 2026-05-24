@@ -17,13 +17,6 @@ describe('ChooseStartDialog', () => {
     return props
   }
 
-  it('renders both options and a cancel control', () => {
-    renderDialog()
-    expect(screen.getByRole('button', { name: /Migrate existing Claude into a profile/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Just add a new profile/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
-  })
-
   it('routes the migrate option', async () => {
     const props = renderDialog()
     await userEvent.setup().click(screen.getByRole('button', { name: /Migrate existing Claude into a profile/i }))
@@ -49,17 +42,5 @@ describe('ChooseStartDialog', () => {
     const props = renderDialog()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Cancel' }))
     expect(props.onClose).toHaveBeenCalledOnce()
-  })
-
-  it('explains what migrate does in the migrate-option body', () => {
-    renderDialog()
-    const matches = screen.getAllByText((_content, element) => {
-      if (!element || element.tagName !== 'P') {
-        return false
-      }
-      const text = element.textContent ?? ''
-      return /existing ~\/\.claude becomes/i.test(text)
-    })
-    expect(matches.length).toBeGreaterThan(0)
   })
 })

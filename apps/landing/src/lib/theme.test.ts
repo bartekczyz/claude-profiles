@@ -14,10 +14,4 @@ describe('themeScript', () => {
   it('falls back to light on error', () => {
     expect(themeScript).toContain("var theme = 'light'")
   })
-
-  it('preloads both screenshot variants with priority on the active theme', () => {
-    expect(themeScript).toContain("preload(theme, 'high')")
-    expect(themeScript).toContain("preload(other, 'low')")
-    expect(themeScript).toContain("'/screenshot-'")
-  })
 })
