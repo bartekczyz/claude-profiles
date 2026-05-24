@@ -13,7 +13,14 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      # `token:` MUST be a PAT (or GitHub App token) — not the default
+      # GITHUB_TOKEN. GitHub deliberately doesn't fire downstream
+      # workflows for tags pushed under GITHUB_TOKEN, so release.yml
+      # would never run on the v* tag release-please creates. A PAT
+      # bypasses that. See:
+      # https://github.com/googleapis/release-please-action#github-credentials
       - uses: googleapis/release-please-action@v4
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

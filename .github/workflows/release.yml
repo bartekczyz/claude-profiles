@@ -4,13 +4,23 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re-)build, e.g. v0.1.1'
+        required: true
+        type: string
 
 jobs:
   publish:
     runs-on: macos-latest
 
     steps:
+      # On `workflow_dispatch` we explicitly check out the requested tag;
+      # on `push: tags/v*` we just take whatever ref triggered the run.
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       # No `version:` here — root package.json's `packageManager` field
       # is the source of truth; pnpm/action-setup@v4 errors if both are set.
@@ -71,8 +81,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/claude-profiles
-          tagName: ${{ github.ref_name }}
-          releaseName: 'claude-profiles ${{ github.ref_name }}'
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: 'claude-profiles ${{ inputs.tag || github.ref_name }}'
           releaseBody: 'See [CHANGELOG.md](./apps/claude-profiles/CHANGELOG.md) for details. Auto-update will pick this up on the next 6-hour check.'
           releaseDraft: true
           prerelease: false
