@@ -26,3 +26,43 @@ const repoUrl = 'https://github.com/bartekczyz/claude-profiles'
   </div>
   <p id="fineprint" class="font-mono text-[11.5px] text-muted">macOS 12+  ·  18 MB  ·  MIT</p>
 </section>
+
+<script>
+  import { fetchLatest, pickDmg } from '../lib/release.ts'
+  import type { Release } from '../lib/release.ts'
+
+  declare global {
+    interface Window {
+      __cpRelease: Release | undefined
+    }
+  }
+
+  async function init() {
+    const release = await fetchLatest()
+    if (release) {
+      const dmg = pickDmg(release.assets)
+      if (dmg) {
+        const cta = document.getElementById('download-cta')
+        if (cta) {
+          cta.setAttribute('href', dmg.browser_download_url)
+        }
+        const installRow = document.querySelector('[data-install-cmd="install-download"]')
+        if (installRow) {
+          installRow.textContent = dmg.name
+        }
+        const fineprint = document.getElementById('fineprint')
+        if (fineprint) {
+          const sizeMb = Math.round(dmg.size / (1024 * 1024))
+          fineprint.textContent = `macOS 12+  ·  ${sizeMb} MB  ·  MIT`
+        }
+      }
+      const versionEl = document.getElementById('footer-version')
+      if (versionEl) {
+        versionEl.textContent = release.tag_name
+      }
+      window.__cpRelease = release
+    }
+  }
+
+  init()
+</script>
