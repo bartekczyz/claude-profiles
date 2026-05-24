@@ -29,13 +29,6 @@ const repoUrl = 'https://github.com/bartekczyz/claude-profiles'
 
 <script>
   import { fetchLatest, pickDmg } from '../lib/release.ts'
-  import type { Release } from '../lib/release.ts'
-
-  declare global {
-    interface Window {
-      __cpRelease: Release | undefined
-    }
-  }
 
   async function init() {
     const release = await fetchLatest()
