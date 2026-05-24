@@ -11,6 +11,13 @@ on:
         required: true
         type: string
 
+# tauri-action uploads the built .dmg / updater artifacts to the
+# release tagged `tagName`; that's a write op on the Releases API and
+# needs `contents: write`. Without it GitHub returns "Resource not
+# accessible by integration" on the upload step.
+permissions:
+  contents: write
+
 jobs:
   publish:
     runs-on: macos-latest
