@@ -12,6 +12,7 @@ import { CommandPalette } from '@/features/command-palette/components/command-pa
 import { useCommandPalette } from '@/features/command-palette/use-command-palette'
 import { useDependencies } from '@/features/dependencies/api/use-dependencies'
 import { useMigration } from '@/features/migration/api/use-migration'
+import { ChooseStartDialog } from '@/features/migration/components/choose-start-dialog'
 import { MigrationDialog } from '@/features/migration/components/migration-dialog'
 import { PathSetupBanner } from '@/features/onboarding/components/path-setup-banner'
 import { WelcomeDialog } from '@/features/onboarding/components/welcome-dialog'
@@ -31,7 +32,13 @@ import { UpdateToastTrigger } from '@/features/updater/components/update-toast-t
 import { useAppState } from '@/lib/app-state/use-app-state'
 import { QueryErrorBoundary } from '@/lib/query/error-boundary'
 
-type DialogState = { kind: 'none' } | { kind: 'create' } | { kind: 'edit' } | { kind: 'delete' } | { kind: 'about' }
+type DialogState =
+  | { kind: 'none' }
+  | { kind: 'choose-start' }
+  | { kind: 'create' }
+  | { kind: 'edit' }
+  | { kind: 'delete' }
+  | { kind: 'about' }
 
 type RightPane = { kind: 'profile' } | { kind: 'settings' }
 
@@ -175,15 +182,7 @@ function AppContent() {
 
   const shouldShowWelcome = !appState.state.welcomeShown
 
-  const migrationDismissedRecently = isWithinDismissalWindow(appState.state.migrationDismissedAt)
-
-  const shouldOfferMigration =
-    appState.state.welcomeShown &&
-    profiles.profiles.length === 0 &&
-    migration.anyDetected &&
-    !migrationDismissedRecently
-
-  const showMigration = shouldOfferMigration || forceMigrationOpen
+  const showMigration = forceMigrationOpen
 
   const anyCliProfile = profiles.profiles.some((profile) => profile.surfaces.cli)
   const pathBannerDismissedRecently = isWithinDismissalWindow(appState.state.pathBannerDismissedAt)
@@ -202,7 +201,7 @@ function AppContent() {
   // palette, migration prompt) is on top, EXCEPT toggle-palette which
   // must keep working while the palette itself is open so ⌘K closes it.
   useShortcut('toggle-palette', palette.toggle, { enabled: !dialogOpen && !showMigration })
-  useShortcut('open-create-profile', () => setDialog({ kind: 'create' }), { enabled: !overlayOpen })
+  useShortcut('open-create-profile', requestCreateProfile, { enabled: !overlayOpen })
   useShortcut(
     'toggle-settings',
     () => setRightPane((current) => (current.kind === 'settings' ? { kind: 'profile' } : { kind: 'settings' })),
@@ -311,6 +310,14 @@ function AppContent() {
     await profiles.remove({ id: selected.id, ...input })
   }
 
+  function requestCreateProfile() {
+    if (profiles.profiles.length === 0 && migration.anyDetected) {
+      setDialog({ kind: 'choose-start' })
+      return
+    }
+    setDialog({ kind: 'create' })
+  }
+
   if (shouldShowWelcome) {
     return (
       <WelcomeDialog
@@ -358,7 +365,7 @@ function AppContent() {
         />
       ) : null}
       {isEmpty ? (
-        <EmptyStateScreen onCreate={() => setDialog({ kind: 'create' })} />
+        <EmptyStateScreen onCreate={requestCreateProfile} />
       ) : (
         <div className="flex min-h-0 flex-1">
           <Sidebar
@@ -369,7 +376,7 @@ function AppContent() {
               profiles.select(id)
               setRightPane({ kind: 'profile' })
             }}
-            onCreate={() => setDialog({ kind: 'create' })}
+            onCreate={requestCreateProfile}
             onSettings={() => setRightPane({ kind: 'settings' })}
             onReorder={(ids) => {
               void profiles.reorder(ids)
@@ -442,13 +449,22 @@ function AppContent() {
         <AboutDialog open={dialog.kind === 'about'} onClose={() => setDialog({ kind: 'none' })} />
       </Suspense>
 
+      <ChooseStartDialog
+        open={dialog.kind === 'choose-start'}
+        onMigrate={() => {
+          setDialog({ kind: 'none' })
+          setForceMigrationOpen(true)
+        }}
+        onCreate={() => setDialog({ kind: 'create' })}
+        onClose={() => setDialog({ kind: 'none' })}
+      />
+
       {showMigration ? (
         <MigrationDialog
           open
           existing={migration.existing}
-          onClose={async () => {
+          onClose={() => {
             setForceMigrationOpen(false)
-            await appState.update({ migrationDismissedAt: new Date().toISOString() })
           }}
           onImport={async (input) => {
             const imported = await migration.import(input)
@@ -492,7 +508,7 @@ function AppContent() {
         onCopy={(profile) => {
           void usage.copyCli({ profileId: profile.id, command: `claude-${profile.slug}` })
         }}
-        onCreate={() => setDialog({ kind: 'create' })}
+        onCreate={requestCreateProfile}
         onSettings={() => setRightPane({ kind: 'settings' })}
         onImport={async () => {
           await migration.refresh()
