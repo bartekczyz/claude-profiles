@@ -111,3 +111,13 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: --target universal-apple-darwin
+
+      # release-please publishes the GitHub Release as a draft so users
+      # never see a release without its .dmg attached. Flip it to
+      # published only after tauri-action successfully uploaded every
+      # asset — implicit `if: success()` skips this on failure, leaving
+      # the broken release as a draft for inspection.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ inputs.tag || github.ref_name }}" --draft=false
