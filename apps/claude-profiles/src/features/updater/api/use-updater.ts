@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useState } from 'react'
 
+import { relaunch } from '@tauri-apps/plugin-process'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 
 type UpdaterStatus =
@@ -38,8 +39,10 @@ async function runCheckInto(setStatus: StatusSetter): Promise<void> {
  * triggers so the toast component and Settings → System can drive their
  * own UI from the same source of truth.
  *
- * The plugin's `downloadAndInstall` restarts the app itself on success, so
- * there's no `restart` call here.
+ * Tauri 2's `downloadAndInstall` does NOT relaunch the app on its own —
+ * the process plugin's `relaunch()` has to be called explicitly after,
+ * otherwise the user sees "Installing…" forever and has to manually
+ * quit + reopen to pick up the new binary.
  *
  * Implementation note: the polling body lives in `runCheckInto` (a
  * module-level function) so the effect dependency list stays empty — the
@@ -61,6 +64,7 @@ export function useUpdater() {
     setStatus({ kind: 'installing' })
     try {
       await update.downloadAndInstall()
+      await relaunch()
     } catch (caught) {
       setStatus({
         kind: 'error',
