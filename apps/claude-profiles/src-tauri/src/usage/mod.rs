@@ -1,3 +1,5 @@
+pub(crate) mod credentials;
+
 use serde::Serialize;
 
 #[allow(dead_code)]
