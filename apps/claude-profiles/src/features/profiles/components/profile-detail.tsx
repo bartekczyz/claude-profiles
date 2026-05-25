@@ -15,6 +15,7 @@ import { ProfileDetailHeader } from './profile-detail-header'
 import { ProfileDetailHintStrip } from './profile-detail-hint-strip'
 import { ProfileDetailRecentActivity } from './profile-detail-recent-activity'
 import { ProfileDetailSurfaceCard } from './profile-detail-surface-card'
+import { ProfileDetailUsageCard } from './profile-detail-usage-card'
 
 type Props = {
   profile: Profile
@@ -59,6 +60,8 @@ export function ProfileDetail({ profile, onEdit, onDelete }: Props) {
       <div className="flex-1 overflow-y-auto px-10 pt-10">
         <div className="mx-auto w-full max-w-[640px]">
           <ProfileDetailHeader profile={profile} onEdit={onEdit} />
+
+          <ProfileDetailUsageCard profileId={profile.id} cliEnabled={profile.surfaces.cli} />
 
           <div className="mb-6 grid grid-cols-1 gap-3.5 lg:grid-cols-2">
             {/* Re-keying on profile.id ensures the loaded paths state doesn't
