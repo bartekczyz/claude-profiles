@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getProfileUsage } from '@/lib/commands'
 import { queryKeys } from '@/lib/query/keys'
 
-const REFETCH_INTERVAL_MS = 5 * 60 * 1000
+export const refetchIntervalMs = 5 * 60 * 1000
 const knownQuotaErrors: ReadonlyArray<QuotaError> = ['no_credentials', 'unauthorized', 'network', 'unknown']
 
 /**
@@ -20,7 +20,7 @@ export function useProfileUsage(profileId: string) {
     queryFn: async () => narrowProfileUsage(await getProfileUsage(profileId)),
     staleTime: 0,
     refetchOnMount: 'always',
-    refetchInterval: REFETCH_INTERVAL_MS,
+    refetchInterval: refetchIntervalMs,
   })
 }
 

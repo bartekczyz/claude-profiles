@@ -12,6 +12,7 @@ import { ProfileDetailUsageCard } from './profile-detail-usage-card'
 // mocked module at test time.
 vi.mock('../api/use-profile-usage', () => ({
   useProfileUsage: vi.fn(),
+  refetchIntervalMs: 5 * 60 * 1000,
 }))
 
 function makeUsage(overrides: Partial<ProfileUsage> = {}): ProfileUsage {
@@ -99,5 +100,32 @@ describe('ProfileDetailUsageCard', () => {
     })
     const { container } = renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={false} />)
     expect(container.firstChild).toBeNull()
+  })
+
+  it('shows "refresh in Xm" countdown derived from dataUpdatedAt', () => {
+    // Fetched just now; with a 5-minute refetch interval the countdown
+    // should land at "4m" (5 minutes minus the few ms between Date.now()
+    // calls). Loose regex tolerates the off-by-one between 4m and 5m.
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage(),
+      isLoading: false,
+      isFetching: false,
+      dataUpdatedAt: Date.now(),
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    expect(screen.getByText(/refresh in [45]m/)).toBeInTheDocument()
+  })
+
+  it('shows "refreshing…" while a fetch is in flight', () => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage(),
+      isLoading: false,
+      isFetching: true,
+      dataUpdatedAt: Date.now(),
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    expect(screen.getByText(/refreshing/)).toBeInTheDocument()
   })
 })

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import type { ProfileUsage, UsageWindow } from '@/lib/types'
 
-import { Component } from 'react'
+import { Component, useEffect, useState } from 'react'
 
 import { RefreshCw } from 'lucide-react'
 
-import { useProfileUsage } from '../api/use-profile-usage'
+import { refetchIntervalMs, useProfileUsage } from '../api/use-profile-usage'
 
 type Props = {
   profileId: string
@@ -24,26 +24,64 @@ export function ProfileDetailUsageCard({ profileId, cliEnabled }: Props) {
 }
 
 function UsageCardInner({ profileId }: { profileId: string }) {
-  const { data, isLoading, isFetching, isError, refetch } = useProfileUsage(profileId)
+  const { data, isLoading, isFetching, isError, dataUpdatedAt, refetch } = useProfileUsage(profileId)
 
   return (
     <section className="mb-6 rounded-md border border-border p-4">
       <header className="mb-3 flex items-center justify-between">
         <div className="font-mono text-eyebrow font-medium uppercase tracking-[0.1em] text-muted-strong">Usage</div>
-        <button
-          type="button"
-          aria-label="Refresh usage"
-          disabled={isFetching}
-          onClick={() => refetch()}
-          className="text-muted-strong hover:text-fg disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={isFetching ? 'animate-spin' : undefined} />
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshCountdown isFetching={isFetching} dataUpdatedAt={dataUpdatedAt} />
+          <button
+            type="button"
+            aria-label="Refresh usage"
+            disabled={isFetching}
+            onClick={() => refetch()}
+            className="cursor-pointer text-muted-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isFetching ? 'animate-spin' : undefined} />
+          </button>
+        </div>
       </header>
 
       {isLoading ? <MetersSkeleton /> : <Body usage={data ?? null} isError={isError} />}
     </section>
   )
+}
+
+function RefreshCountdown({ isFetching, dataUpdatedAt }: { isFetching: boolean; dataUpdatedAt: number | undefined }) {
+  // Force re-render every 5s so the countdown ticks down without us
+  // wiring an explicit timer per second. 5s is plenty since the label
+  // resolution is minutes for most of the window.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((value) => value + 1), 5_000)
+    return () => clearInterval(id)
+  }, [])
+
+  if (isFetching) {
+    return <span className="font-mono text-mono text-muted-strong">refreshing…</span>
+  }
+  if (!dataUpdatedAt) {
+    return null
+  }
+  const remainingMs = dataUpdatedAt + refetchIntervalMs - Date.now()
+  const label = formatRefreshIn(remainingMs)
+  if (!label) {
+    return null
+  }
+  return <span className="font-mono text-mono text-muted-strong">refresh in {label}</span>
+}
+
+function formatRefreshIn(deltaMs: number): string | null {
+  if (deltaMs <= 0) {
+    return 'soon'
+  }
+  const totalSeconds = Math.floor(deltaMs / 1000)
+  if (totalSeconds >= 60) {
+    return `${Math.floor(totalSeconds / 60)}m`
+  }
+  return `${totalSeconds}s`
 }
 
 function Body({ usage, isError }: { usage: ProfileUsage | null; isError: boolean }) {
@@ -73,14 +111,29 @@ function Body({ usage, isError }: { usage: ProfileUsage | null; isError: boolean
 function Meters({ quota }: { quota: ProfileUsage['quota'] }) {
   return (
     <div className="flex flex-col gap-2">
-      <Meter label="5-hour window" meterWindow={quota?.fiveHour ?? null} />
-      <Meter label="Weekly" meterWindow={quota?.sevenDay ?? null} />
-      <Meter label="Weekly Sonnet" meterWindow={quota?.sevenDaySonnet ?? null} />
+      <Meter label="5-hour window" shortLabel="5h" meterWindow={quota?.fiveHour ?? null} />
+      <Meter label="Weekly" shortLabel="W" meterWindow={quota?.sevenDay ?? null} />
+      <Meter label="Weekly Sonnet" shortLabel="WS" meterWindow={quota?.sevenDaySonnet ?? null} />
     </div>
   )
 }
 
-function Meter({ label, meterWindow }: { label: string; meterWindow: UsageWindow | null }) {
+// Layout: [label] [bar (1fr)] [trailing text fixed width]. The fixed
+// trailing column keeps every bar exactly the same width across rows
+// and reserves space for the longest "100% · resets in 23h 59m"
+// string (~22 mono chars ≈ 180px). The label column shrinks at narrow
+// viewports so the bar still has room to breathe.
+const meterGridClass = 'grid grid-cols-[32px_1fr_180px] items-center gap-2 lg:grid-cols-[140px_1fr_180px] lg:gap-3'
+
+function Meter({
+  label,
+  shortLabel,
+  meterWindow,
+}: {
+  label: string
+  shortLabel: string
+  meterWindow: UsageWindow | null
+}) {
   const utilization = meterWindow?.utilization ?? null
   const percent = utilization === null ? null : Math.round(utilization * 100)
   const tone = percent === null ? 'muted' : percent < 50 ? 'ok' : percent < 80 ? 'warn' : 'crit'
@@ -89,8 +142,11 @@ function Meter({ label, meterWindow }: { label: string; meterWindow: UsageWindow
   const resetsLabel = formatReset(meterWindow?.resetsAt ?? null)
 
   return (
-    <div className="grid grid-cols-[140px_1fr_auto] items-center gap-3">
-      <span className="font-mono text-mono text-muted-strong">{label}</span>
+    <div className={meterGridClass}>
+      <span className="font-mono text-mono text-muted-strong">
+        <span className="lg:hidden">{shortLabel}</span>
+        <span className="hidden lg:inline">{label}</span>
+      </span>
       <div
         role="progressbar"
         aria-valuenow={percent ?? undefined}
@@ -101,7 +157,7 @@ function Meter({ label, meterWindow }: { label: string; meterWindow: UsageWindow
       >
         <div className={`h-full ${barClass}`} style={{ width: percent === null ? 0 : `${percent}%` }} />
       </div>
-      <span className="font-mono text-mono tabular-nums text-muted-strong">
+      <span className="text-right font-mono text-mono tabular-nums text-muted-strong">
         {percent === null ? '—' : `${percent}%`}
         {resetsLabel ? ` · ${resetsLabel}` : ''}
       </span>
@@ -137,10 +193,10 @@ function MetersSkeleton() {
   return (
     <div className="flex flex-col gap-2">
       {[0, 1, 2].map((row) => (
-        <div key={row} className="grid grid-cols-[140px_1fr_auto] items-center gap-3">
-          <span className="h-3 w-24 rounded bg-cream-2" />
+        <div key={row} className={meterGridClass}>
+          <span className="h-3 w-full rounded bg-cream-2" />
           <span className="h-2 w-full rounded bg-cream-2" />
-          <span className="h-3 w-10 rounded bg-cream-2" />
+          <span className="h-3 w-full rounded bg-cream-2" />
         </div>
       ))}
     </div>
