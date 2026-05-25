@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/bartekczyz/claude-profiles/compare/v0.2.2...v0.3.0) (2026-05-25)
+
+
+### Added
+
+* **empty-state:** guide users through Claude install when neither surface is detected ([b46aff6](https://github.com/bartekczyz/claude-profiles/commit/b46aff6e79f32e9e548d1ee542f2b2ad4f35b6b1))
+* **empty-state:** guide users through Claude install when neither surface is detected ([2e922e1](https://github.com/bartekczyz/claude-profiles/commit/2e922e14b348b243fcf60f0d1f7d84ac1c2adec2))
+* **settings:** show the app version next to the Updates row ([aa1054d](https://github.com/bartekczyz/claude-profiles/commit/aa1054d7118512fa663768b34a32cef5cc3b472f))
+
+
+### Fixed
+
+* **about:** correct version display and tidy About / Settings ([6bf20fe](https://github.com/bartekczyz/claude-profiles/commit/6bf20fe07a70049ac74129c6f3d6748d6ead7d30))
+* **about:** use a clearer dialog title and drop the long subtitle ([ef4dd0d](https://github.com/bartekczyz/claude-profiles/commit/ef4dd0d93a126b36274900f048db9627dcfa890d))
+
 ## [0.2.2](https://github.com/bartekczyz/claude-profiles/compare/v0.2.1...v0.2.2) (2026-05-25)
 
 
