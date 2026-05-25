@@ -27,6 +27,10 @@ const OPEN_ABOUT_ID: &str = "open-about";
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        // Provides `relaunch()` to the frontend so the updater can restart
+        // the app itself after `downloadAndInstall` finishes — Tauri 2's
+        // updater plugin does NOT relaunch on its own.
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
