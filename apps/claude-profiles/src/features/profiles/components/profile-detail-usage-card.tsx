@@ -91,21 +91,37 @@ function Body({ usage, isError }: { usage: ProfileUsage | null; isError: boolean
   if (!usage) {
     return <MetersSkeleton />
   }
-  if (usage.quotaError === 'no_credentials') {
-    return (
-      <p className="font-mono text-mono text-muted-strong">
-        Sign in to Claude Code once with this profile to see usage.
-      </p>
-    )
-  }
-  if (usage.quotaError === 'unauthorized') {
-    return (
-      <p className="font-mono text-mono text-muted-strong">
-        Session expired — sign in again with this profile to refresh usage.
-      </p>
-    )
+  const quotaMessage = quotaErrorMessage(usage.quotaError, usage.quota)
+  if (quotaMessage) {
+    return <p className="font-mono text-mono text-muted-strong">{quotaMessage}</p>
   }
   return <Meters quota={usage.quota} />
+}
+
+// Returns the message to show in place of the meters, or null if the
+// meters should render. We treat "quota is null AND no recognised error"
+// the same as `unknown` so we never silently render empty bars when the
+// backend gave us nothing usable.
+function quotaErrorMessage(quotaError: ProfileUsage['quotaError'], quota: ProfileUsage['quota']): string | null {
+  if (quotaError === 'no_credentials') {
+    return 'Sign in to Claude Code once with this profile to see usage.'
+  }
+  if (quotaError === 'unauthorized') {
+    return 'Session expired — sign in again with this profile to refresh usage.'
+  }
+  if (quotaError === 'rate_limited') {
+    return 'Rate limited by Anthropic. Try again in a few minutes.'
+  }
+  if (quotaError === 'network') {
+    return "Couldn't reach Anthropic — check your connection and retry."
+  }
+  if (quotaError === 'unknown') {
+    return "Couldn't load usage stats. Try again."
+  }
+  if (!quota) {
+    return "Couldn't load usage stats. Try again."
+  }
+  return null
 }
 
 function Meters({ quota }: { quota: ProfileUsage['quota'] }) {

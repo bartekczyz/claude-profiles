@@ -79,6 +79,35 @@ describe('ProfileDetailUsageCard', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
+  it.each([
+    ['unauthorized', /session expired/i],
+    ['rate_limited', /rate limited/i],
+    ['network', /couldn't reach anthropic/i],
+    ['unknown', /couldn't load usage stats/i],
+  ] as const)('shows an explicit message and no meters when quotaError is %s', (quotaError, expected) => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage({ quota: null, quotaError }),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByText(expected)).toBeInTheDocument()
+  })
+
+  it('shows the unknown-error message when quota is null with no quotaError (defensive)', () => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage({ quota: null, quotaError: null }),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByText(/couldn't load usage stats/i)).toBeInTheDocument()
+  })
+
   it('calls refetch when the refresh button is clicked', () => {
     const refetch = vi.fn()
     ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
