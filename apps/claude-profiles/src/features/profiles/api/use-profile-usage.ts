@@ -6,7 +6,13 @@ import { getProfileUsage } from '@/lib/commands'
 import { queryKeys } from '@/lib/query/keys'
 
 export const refetchIntervalMs = 5 * 60 * 1000
-const knownQuotaErrors: ReadonlyArray<QuotaError> = ['no_credentials', 'unauthorized', 'network', 'unknown']
+const knownQuotaErrors: ReadonlyArray<QuotaError> = [
+  'no_credentials',
+  'unauthorized',
+  'rate_limited',
+  'network',
+  'unknown',
+]
 
 /**
  * Fetches the profile's usage stats. Refetches every 5 minutes while the

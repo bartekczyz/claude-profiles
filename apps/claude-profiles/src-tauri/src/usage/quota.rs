@@ -75,14 +75,11 @@ pub async fn fetch_quota(
 ) -> Result<QuotaUsage, QuotaError> {
     let token = read_access_token(cli_config_dir)?;
     let response = client.fetch(&token).await?;
-    // 429 and 5xx are explicitly split out from the catch-all even
-    // though both currently map to Network — they represent a
-    // distinct "transient, retry will probably help" category that
-    // may grow its own variant later (e.g. RateLimited for backoff).
     match response.status {
         200 => parse_body(&response.body),
         401 | 403 => Err(QuotaError::Unauthorized),
-        429 | 500..=599 => Err(QuotaError::Network),
+        429 => Err(QuotaError::RateLimited),
+        500..=599 => Err(QuotaError::Network),
         _ => Err(QuotaError::Network),
     }
 }
@@ -240,7 +237,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rate_limit_maps_to_network() {
+    async fn rate_limit_maps_to_rate_limited() {
         let dir = dir_with_token();
         let client = StubClient {
             status: 429,
@@ -248,7 +245,7 @@ mod tests {
         };
         assert!(matches!(
             fetch_quota(dir.path(), &client).await.unwrap_err(),
-            QuotaError::Network,
+            QuotaError::RateLimited,
         ));
     }
 

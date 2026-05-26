@@ -33,6 +33,15 @@ describe('narrowProfileUsage', () => {
     expect(result.quota?.fiveHour?.utilization).toBeNull()
   })
 
+  it('preserves the rate_limited quotaError', () => {
+    const result = narrowProfileUsage({
+      quota: null,
+      quotaError: 'rate_limited',
+      fetchedAt: 'x',
+    })
+    expect(result.quotaError).toBe('rate_limited')
+  })
+
   it('treats unknown quotaError values as "unknown"', () => {
     const result = narrowProfileUsage({
       quota: null,

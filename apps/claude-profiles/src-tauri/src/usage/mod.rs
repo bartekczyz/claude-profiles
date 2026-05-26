@@ -31,6 +31,7 @@ pub struct Window {
 pub enum QuotaError {
     NoCredentials,
     Unauthorized,
+    RateLimited,
     Network,
     Unknown,
 }

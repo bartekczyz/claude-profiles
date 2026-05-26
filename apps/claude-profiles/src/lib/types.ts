@@ -144,7 +144,7 @@ export type QuotaUsage = {
   sevenDaySonnet: UsageWindow | null
 }
 
-export type QuotaError = 'no_credentials' | 'unauthorized' | 'network' | 'unknown'
+export type QuotaError = 'no_credentials' | 'unauthorized' | 'rate_limited' | 'network' | 'unknown'
 
 export type ProfileUsage = {
   quota: QuotaUsage | null
