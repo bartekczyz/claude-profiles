@@ -107,7 +107,11 @@ function quotaErrorMessage(quotaError: ProfileUsage['quotaError'], quota: Profil
     return 'Sign in to Claude Code once with this profile to see usage.'
   }
   if (quotaError === 'unauthorized') {
-    return 'Session expired — sign in again with this profile to refresh usage.'
+    // Not a real "session expired" — Claude Code's short-lived access
+    // token rolls over every ~hour and is silently refreshed the next
+    // time you invoke `claude`. Same step also handles the rarer case
+    // where the token was actually revoked (claude will prompt re-login).
+    return 'Token refresh needed — run `claude` in a terminal once, then retry.'
   }
   if (quotaError === 'rate_limited') {
     return 'Rate limited by Anthropic. Try again in a few minutes.'
