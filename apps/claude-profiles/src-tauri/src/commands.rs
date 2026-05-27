@@ -414,5 +414,6 @@ pub async fn get_profile_usage(profile_id: String) -> AppResult<ProfileUsage> {
     let cli_config = profile_root.join("cli-config");
     let client = ReqwestUsageClient::new(format!("claude-profiles/{}", env!("CARGO_PKG_VERSION")))
         .map_err(|_| AppError::Io(std::io::Error::other("could not build HTTP client")))?;
-    Ok(usage::build(&cli_config, &client).await)
+    let refresher = usage::refresh::ClaudeCliRefresher;
+    Ok(usage::build_with_cli_refresh(&cli_config, &client, &refresher).await)
 }
