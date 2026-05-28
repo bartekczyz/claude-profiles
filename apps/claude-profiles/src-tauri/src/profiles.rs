@@ -54,8 +54,8 @@ pub struct ProfilePaths {
     pub data_dir: String,
     pub gui_data_dir: String,
     pub cli_config_dir: String,
-    pub gui_launcher_path: String,
-    pub cli_wrapper_path: String,
+    pub gui_launcher_path: Option<String>,
+    pub cli_wrapper_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -406,7 +406,32 @@ pub fn touch_last_used(id: &str) -> AppResult<Profile> {
     Ok(updated)
 }
 
+/// Paths for the synthetic "default" entry representing the user's
+/// unmigrated stock Claude install. Returns None for both
+/// `gui_launcher_path` (when stock Claude.app isn't detected) and
+/// `cli_wrapper_path` (stock claude has no claude-profiles wrapper).
+fn default_claude_paths() -> AppResult<ProfilePaths> {
+    let home =
+        dirs::home_dir().ok_or_else(|| AppError::Io(std::io::Error::other("no home dir")))?;
+    let desktop_path = crate::paths::claude_desktop_install_path()?;
+    let code_path = crate::paths::claude_code_install_path()?;
+    let existing = crate::migration::detect(&desktop_path, &code_path);
+    Ok(ProfilePaths {
+        data_dir: home.join(".claude").display().to_string(),
+        gui_data_dir: home
+            .join("Library/Application Support/Claude")
+            .display()
+            .to_string(),
+        cli_config_dir: home.join(".claude").display().to_string(),
+        gui_launcher_path: existing.claude_desktop_path,
+        cli_wrapper_path: None,
+    })
+}
+
 pub fn paths(id: &str) -> AppResult<ProfilePaths> {
+    if id == "default:claude" {
+        return default_claude_paths();
+    }
     let all = load()?;
     let profile = all
         .iter()
@@ -417,12 +442,16 @@ pub fn paths(id: &str) -> AppResult<ProfilePaths> {
         data_dir: data_dir.display().to_string(),
         gui_data_dir: data_dir.join("gui-data").display().to_string(),
         cli_config_dir: data_dir.join("cli-config").display().to_string(),
-        gui_launcher_path: crate::paths::gui_launcher_path(&profile.name)
-            .display()
-            .to_string(),
-        cli_wrapper_path: crate::paths::cli_wrapper_path(&profile.slug)?
-            .display()
-            .to_string(),
+        gui_launcher_path: Some(
+            crate::paths::gui_launcher_path(&profile.name)
+                .display()
+                .to_string(),
+        ),
+        cli_wrapper_path: Some(
+            crate::paths::cli_wrapper_path(&profile.slug)?
+                .display()
+                .to_string(),
+        ),
     })
 }
 
@@ -433,6 +462,28 @@ mod tests {
 
     fn purge_for_test() {
         let _ = std::fs::remove_dir_all(crate::paths::app_data_dir().unwrap());
+    }
+
+    #[test]
+    fn default_claude_paths_resolve_to_stock_locations() {
+        let paths = default_claude_paths().expect("home dir resolvable");
+        assert!(paths.data_dir.ends_with("/.claude"));
+        assert!(paths.cli_config_dir.ends_with("/.claude"));
+        assert!(paths
+            .gui_data_dir
+            .ends_with("/Library/Application Support/Claude"));
+        assert!(paths.cli_wrapper_path.is_none(), "default has no wrapper");
+        // gui_launcher_path is Some only if stock Claude.app is installed;
+        // don't assert on it because the test host may or may not have it.
+    }
+
+    #[test]
+    fn paths_for_reserved_default_id_does_not_consult_managed_profiles_store() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        let result = paths("default:claude").expect("default id resolves");
+        assert!(result.cli_wrapper_path.is_none());
+        purge_for_test();
     }
 
     #[test]

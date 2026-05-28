@@ -64,20 +64,29 @@ export function ProfileDetailSurfaceCards({
   useShortcut('reveal-gui-data', () => safeRun(() => openInFinder(paths.guiDataDir)), {
     enabled: surfaces.gui,
   })
-  useShortcut('reveal-gui-launcher', () => safeRun(() => openInFinder(paths.guiLauncherPath)), {
-    enabled: surfaces.gui,
+  useShortcut('reveal-gui-launcher', () => safeRun(() => openInFinder(paths.guiLauncherPath ?? '')), {
+    enabled: surfaces.gui && paths.guiLauncherPath !== null,
   })
   useShortcut('reveal-cli-config', () => safeRun(() => openInFinder(paths.cliConfigDir)), {
     enabled: surfaces.cli,
   })
-  useShortcut('reveal-cli-wrapper', () => safeRun(() => openInFinder(paths.cliWrapperPath)), {
-    enabled: surfaces.cli,
+  useShortcut('reveal-cli-wrapper', () => safeRun(() => openInFinder(paths.cliWrapperPath ?? '')), {
+    enabled: surfaces.cli && paths.cliWrapperPath !== null,
   })
 
-  const cliStatusDetail = dependencies.deps.localBinOnPath
-    ? `Wrapper installed · ${basename(paths.cliWrapperPath)} on PATH`
-    : `Wrapper installed · PATH needs ~/.local/bin (Settings → Shell PATH)`
-  const cliStatusTone: 'success' | 'warning' = dependencies.deps.localBinOnPath ? 'success' : 'warning'
+  const cliStatusDetail =
+    paths.cliWrapperPath === null
+      ? 'Stock claude — no wrapper'
+      : dependencies.deps.localBinOnPath
+        ? `Wrapper installed · ${basename(paths.cliWrapperPath)} on PATH`
+        : `Wrapper installed · PATH needs ~/.local/bin (Settings → Shell PATH)`
+  const cliStatusTone: 'success' | 'warning' =
+    paths.cliWrapperPath === null ? 'success' : dependencies.deps.localBinOnPath ? 'success' : 'warning'
+
+  const guiLauncherPath = paths.guiLauncherPath
+  const cliWrapperPath = paths.cliWrapperPath
+
+  const guiStatusDetail = guiLauncherPath === null ? undefined : `Launcher ready in ${shorten(guiLauncherPath)}`
 
   return (
     <>
@@ -86,11 +95,19 @@ export function ProfileDetailSurfaceCards({
         enabled={surfaces.gui}
         primaryLabel="Open Claude"
         primaryKbd="⏎"
-        statusDetail={`Launcher ready in ${shorten(paths.guiLauncherPath)}`}
+        statusDetail={guiStatusDetail}
         primarySuffix={surfaces.gui ? <DeepLinkInfo /> : null}
         secondaries={[
           { label: 'Reveal app', kbd: '⌥1', onClick: () => safeRun(() => openInFinder(paths.guiDataDir)) },
-          { label: 'Launcher', kbd: '⌥2', onClick: () => safeRun(() => openInFinder(paths.guiLauncherPath)) },
+          ...(guiLauncherPath !== null
+            ? [
+                {
+                  label: 'Launcher',
+                  kbd: '⌥2',
+                  onClick: () => safeRun(() => openInFinder(guiLauncherPath)),
+                },
+              ]
+            : []),
         ]}
         onPrimary={() => safeRun(onLaunchGui)}
       />
@@ -103,7 +120,15 @@ export function ProfileDetailSurfaceCards({
         statusTone={cliStatusTone}
         secondaries={[
           { label: 'Config', kbd: '⌥3', onClick: () => safeRun(() => openInFinder(paths.cliConfigDir)) },
-          { label: 'Wrapper', kbd: '⌥4', onClick: () => safeRun(() => openInFinder(paths.cliWrapperPath)) },
+          ...(cliWrapperPath !== null
+            ? [
+                {
+                  label: 'Wrapper',
+                  kbd: '⌥4',
+                  onClick: () => safeRun(() => openInFinder(cliWrapperPath)),
+                },
+              ]
+            : []),
         ]}
         onPrimary={() => safeRun(onCopyCli)}
       />
