@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.4.0](https://github.com/bartekczyz/claude-profiles/compare/v0.3.0...v0.4.0) (2026-05-28)
+
+
+### Added
+
+* **usage:** add daily segments and on-pace marker to weekly meters ([0f74bb7](https://github.com/bartekczyz/claude-profiles/commit/0f74bb7c53c325ba25973998dcfa4ac7ed43f939))
+* **usage:** auto-trigger Claude Code refresh on unauthorized quota fetch ([b87dbeb](https://github.com/bartekczyz/claude-profiles/commit/b87dbeb9477e3428b41b3945a6e52bc64ce56e07))
+* **usage:** compose command and register it ([0b5dbdf](https://github.com/bartekczyz/claude-profiles/commit/0b5dbdf6e31e7688c551605eaa7c0ade3e9d34f2))
+* **usage:** defensive credentials reader ([16a4f6a](https://github.com/bartekczyz/claude-profiles/commit/16a4f6a8d767cf9985a2cf311df5e2f2892396df))
+* **usage:** frontend types, hook and defensive narrowing ([555a0fc](https://github.com/bartekczyz/claude-profiles/commit/555a0fcfebf3890e534dbeb099aee754588982ad))
+* **usage:** per-profile Claude usage stats ([5eb69fd](https://github.com/bartekczyz/claude-profiles/commit/5eb69fd832ba034f66f7d0f6586eb2b704b2d5ab))
+* **usage:** per-profile usage card on profile detail ([07c681d](https://github.com/bartekczyz/claude-profiles/commit/07c681d0800cf827633b6ea7c3084fb41893e3d6))
+* **usage:** polish card with countdown, equal-width bars and responsive labels ([da71b9c](https://github.com/bartekczyz/claude-profiles/commit/da71b9c7fbe3ccc5604ee997481f4823aa3a8dc7))
+* **usage:** quota http client with defensive parsing ([1923fe1](https://github.com/bartekczyz/claude-profiles/commit/1923fe19ee7ff073cbc1b0abf82f9209be671341))
+* **usage:** scaffold rust module + price table ([478c142](https://github.com/bartekczyz/claude-profiles/commit/478c142e860ebddfdaab59d3814b93379b6a2d11))
+
+
+### Fixed
+
+* **usage:** fall back to macos keychain for credentials ([79b5a5c](https://github.com/bartekczyz/claude-profiles/commit/79b5a5cca9e14fbe330179792b0df7dce33afd8e))
+* **usage:** gate macOS-only credential lookups behind cfg(target_os = "macos") ([237444f](https://github.com/bartekczyz/claude-profiles/commit/237444fbde1705c6eadd13ae1795e01a48935854))
+* **usage:** harden quota fetch — explicit 4xx mapping, body size pre-check, token trim ([b60a0ad](https://github.com/bartekczyz/claude-profiles/commit/b60a0ad5e9941a8dcbf35d54d4a5fc61dae06814))
+* **usage:** isolate usage cache from profile invalidations, reset error boundary across profiles ([85963e4](https://github.com/bartekczyz/claude-profiles/commit/85963e43a34aea30cfef905d07acd5071d1008d4))
+* **usage:** keep local breakdown visible when quota fetch fails, refine unauthorized copy ([3c46af8](https://github.com/bartekczyz/claude-profiles/commit/3c46af8c67a0215ce9e400b4523ad5396dcb0a29))
+* **usage:** serialise + back off CLI token refresh, wait for token write ([09aae53](https://github.com/bartekczyz/claude-profiles/commit/09aae536f2e4c23ad3c3b653f3266ec2c2f57157))
+* **usage:** show explicit message for every quota error state ([b11a514](https://github.com/bartekczyz/claude-profiles/commit/b11a51435cedd3bb696b3ba29b1241564a011775))
+* **usage:** split 429 rate limit out from generic network error ([0884ec9](https://github.com/bartekczyz/claude-profiles/commit/0884ec9dea4989081baa425bdd6f01b26d1716c0))
+* **usage:** treat utilization as 0-100 percentage, not 0-1 fraction ([ec83b21](https://github.com/bartekczyz/claude-profiles/commit/ec83b2141af9609a93f92f349dbaccbee70807db))
+
+
+### Changed
+
+* **profiles:** rename useProfileUsage to useProfileLastUsed ([52aa7b5](https://github.com/bartekczyz/claude-profiles/commit/52aa7b5c55496217075fb8be1f10dae707dd6865))
+
 ## [0.3.0](https://github.com/bartekczyz/claude-profiles/compare/v0.2.2...v0.3.0) (2026-05-25)
 
 
