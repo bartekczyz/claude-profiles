@@ -149,6 +149,29 @@ pub fn open_in_finder(path: String) -> AppResult<()> {
     Ok(())
 }
 
+/// Launch an application bundle by its path using macOS's `open` command.
+///
+/// Unlike `open_profile_in_app`, this operates on the pre-resolved path
+/// rather than a managed-profile ID, so it works for the default Claude
+/// entry whose launcher lives at the detected system path.
+#[tauri::command]
+pub fn open_app(path: String) -> AppResult<()> {
+    let target = std::path::Path::new(&path);
+    if !target.exists() {
+        return Err(AppError::NotFound(format!("path does not exist: {path}")));
+    }
+    let status = Command::new("open")
+        .arg(&path)
+        .status()
+        .map_err(AppError::Io)?;
+    if !status.success() {
+        return Err(AppError::Validation(format!(
+            "`open {path}` exited with status {status}"
+        )));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn profile_paths(id: String) -> AppResult<ProfilePaths> {
     profiles::paths(&id)

@@ -99,6 +99,7 @@ pub fn run() {
             commands::toggle_surface,
             commands::open_profile_in_app,
             commands::open_in_finder,
+            commands::open_app,
             commands::profile_paths,
             commands::detect_existing_claude_install,
             commands::detect_existing_claude_sizes,
