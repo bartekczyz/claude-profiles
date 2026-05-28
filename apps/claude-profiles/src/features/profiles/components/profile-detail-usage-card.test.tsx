@@ -158,4 +158,77 @@ describe('ProfileDetailUsageCard', () => {
     renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
     expect(screen.getByText(/refreshing/)).toBeInTheDocument()
   })
+
+  it('clears the error fallback when profileId changes', () => {
+    const usageMock = useProfileUsage as ReturnType<typeof vi.fn>
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    // While profile p1 is mounted, throw to drive the boundary into
+    // its hasError state. Switching to p2 changes the boundary's `key`
+    // so it remounts with a fresh state.
+    usageMock.mockImplementation((profileId: string) => {
+      if (profileId === 'p1') {
+        throw new Error('boom')
+      }
+      return {
+        data: makeUsage(),
+        isLoading: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      }
+    })
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <ProfileDetailUsageCard profileId="p1" cliEnabled={true} />
+      </QueryClientProvider>,
+    )
+    expect(screen.getByText(/couldn't display usage stats/i)).toBeInTheDocument()
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <ProfileDetailUsageCard profileId="p2" cliEnabled={true} />
+      </QueryClientProvider>,
+    )
+    expect(screen.queryByText(/couldn't display usage stats/i)).toBeNull()
+    expect(screen.getAllByRole('progressbar')).toHaveLength(3)
+
+    consoleError.mockRestore()
+    consoleWarn.mockRestore()
+  })
+
+  it('Retry recovers the card by remounting the inner query', () => {
+    const usageMock = useProfileUsage as ReturnType<typeof vi.fn>
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    // Throw until the Retry click flips the flag — Retry bumps the
+    // parent's `attempt` counter, which changes the boundary's key,
+    // which remounts the boundary AND the inner query.
+    let throwing = true
+    usageMock.mockImplementation(() => {
+      if (throwing) {
+        throw new Error('boom')
+      }
+      return {
+        data: makeUsage(),
+        isLoading: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      }
+    })
+
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    expect(screen.getByText(/couldn't display usage stats/i)).toBeInTheDocument()
+
+    throwing = false
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }))
+    expect(screen.queryByText(/couldn't display usage stats/i)).toBeNull()
+    expect(screen.getAllByRole('progressbar')).toHaveLength(3)
+
+    consoleError.mockRestore()
+    consoleWarn.mockRestore()
+  })
 })

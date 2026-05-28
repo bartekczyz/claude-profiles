@@ -13,11 +13,17 @@ type Props = {
 }
 
 export function ProfileDetailUsageCard({ profileId, cliEnabled }: Props) {
+  // Bumped by the in-boundary Retry button to force the inner query
+  // to re-run after a render-time crash. We use it (alongside profileId)
+  // as the key on the boundary itself, so switching profiles or hitting
+  // Retry remounts the boundary — its hasError state resets along with
+  // the inner useQuery's cache subscription.
+  const [attempt, setAttempt] = useState(0)
   if (!cliEnabled) {
     return null
   }
   return (
-    <UsageCardErrorBoundary>
+    <UsageCardErrorBoundary key={`${profileId}:${attempt}`} onRetry={() => setAttempt((value) => value + 1)}>
       <UsageCardInner profileId={profileId} />
     </UsageCardErrorBoundary>
   )
@@ -290,9 +296,10 @@ function MetersSkeleton() {
   )
 }
 
+type BoundaryProps = { children: ReactNode; onRetry: () => void }
 type BoundaryState = { hasError: boolean }
 
-class UsageCardErrorBoundary extends Component<{ children: ReactNode }, BoundaryState> {
+class UsageCardErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   state: BoundaryState = { hasError: false }
   static getDerivedStateFromError(): BoundaryState {
     return { hasError: true }
@@ -302,11 +309,16 @@ class UsageCardErrorBoundary extends Component<{ children: ReactNode }, Boundary
   }
   render() {
     if (this.state.hasError) {
+      // Retry delegates to the parent so it can bump the attempt
+      // counter — that key change is what actually remounts the
+      // boundary (clearing hasError) and the inner card (re-running
+      // useQuery). Toggling local state here alone would clear the
+      // fallback but leave the same broken inner element mounted.
       return (
         <section className="mb-6 rounded-md border border-border p-4">
           <p className="font-mono text-mono text-muted-strong">
             Couldn't display usage stats.{' '}
-            <button type="button" className="underline" onClick={() => this.setState({ hasError: false })}>
+            <button type="button" className="underline" onClick={this.props.onRetry}>
               Retry
             </button>
           </p>

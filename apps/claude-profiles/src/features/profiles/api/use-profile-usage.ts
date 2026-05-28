@@ -22,7 +22,7 @@ const knownQuotaErrors: ReadonlyArray<QuotaError> = [
  */
 export function useProfileUsage(profileId: string) {
   return useQuery({
-    queryKey: queryKeys.profiles.usage(profileId),
+    queryKey: queryKeys.profileUsage(profileId),
     queryFn: async () => narrowProfileUsage(await getProfileUsage(profileId)),
     staleTime: 0,
     refetchOnMount: 'always',

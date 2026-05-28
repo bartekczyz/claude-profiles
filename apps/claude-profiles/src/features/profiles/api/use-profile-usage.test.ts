@@ -1,6 +1,9 @@
 import type { ProfileUsage } from '@/lib/types'
 
+import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
+
+import { queryKeys } from '@/lib/query/keys'
 
 import { narrowProfileUsage } from './use-profile-usage'
 
@@ -67,5 +70,24 @@ describe('narrowProfileUsage', () => {
       fetchedAt: 'x',
     })
     expect(result.quota?.fiveHour?.utilization).toBeNull()
+  })
+})
+
+describe('profileUsage query key', () => {
+  it('is not a subkey of the profiles namespace', () => {
+    // Critical: profile-list mutations invalidate `['profiles']`, and
+    // TanStack matches by prefix. If usage were under that prefix every
+    // reorder / delete / migration would refetch every visible
+    // profile's quota in parallel and trip the rate limiter. This test
+    // pins the structural decision.
+    expect(queryKeys.profileUsage('any')[0]).not.toBe(queryKeys.profiles.all[0])
+  })
+
+  it('survives a prefix invalidation of the profiles namespace', async () => {
+    const client = new QueryClient()
+    client.setQueryData(queryKeys.profileUsage('p1'), { marker: true })
+    await client.invalidateQueries({ queryKey: queryKeys.profiles.all })
+    const state = client.getQueryState(queryKeys.profileUsage('p1'))
+    expect(state?.isInvalidated).toBe(false)
   })
 })

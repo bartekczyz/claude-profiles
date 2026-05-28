@@ -11,8 +11,12 @@ export const queryKeys = {
     detail: (id: string) => ['profiles', id] as const,
     paths: (id: string) => ['profiles', id, 'paths'] as const,
     activity: (id: string) => ['profiles', id, 'activity'] as const,
-    usage: (id: string) => ['profiles', id, 'usage'] as const,
   },
+  // Per-profile Anthropic usage stats. Deliberately OUTSIDE the
+  // `profiles` subtree so a prefix invalidation of `['profiles']`
+  // (which fires on reorder/delete/migration) doesn't refetch every
+  // visible profile's quota in parallel and trip the rate limiter.
+  profileUsage: (id: string) => ['profile-usage', id] as const,
   dependencies: ['dependencies'] as const,
   migration: {
     existing: ['migration', 'existing'] as const,
