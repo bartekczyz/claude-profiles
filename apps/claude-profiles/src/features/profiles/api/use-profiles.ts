@@ -1,7 +1,5 @@
 import type { Profile, ProfilePatch, Surface, Surfaces } from '@/lib/types'
 
-import { useEffect, useState } from 'react'
-
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 
 import {
@@ -16,8 +14,6 @@ import { queryKeys } from '@/lib/query/keys'
 
 type UseProfilesResult = {
   profiles: Array<Profile>
-  selectedId: string | null
-  select: (id: string | null) => void
   create: (input: { name: string; color: string; surfaces: Surfaces }) => Promise<Profile>
   update: (input: { id: string; patch: ProfilePatch }) => Promise<Profile>
   remove: (input: { id: string; moveToTrash: boolean }) => Promise<void>
@@ -36,19 +32,6 @@ export function useProfiles(): UseProfilesResult {
     queryKey: queryKeys.profiles.all,
     queryFn: listProfiles,
   })
-  const [selectedId, setSelectedId] = useState<string | null>(() => profiles[0]?.id ?? null)
-
-  useEffect(() => {
-    if (profiles.length === 0) {
-      if (selectedId !== null) {
-        setSelectedId(null)
-      }
-      return
-    }
-    if (selectedId === null || !profiles.some((profile) => profile.id === selectedId)) {
-      setSelectedId(profiles[0].id)
-    }
-  }, [profiles, selectedId])
 
   const createMutation = useMutation({
     mutationFn: createProfile,
@@ -57,7 +40,6 @@ export function useProfiles(): UseProfilesResult {
         previous ? [...previous, created] : [created],
       )
       void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.activity(created.id) })
-      setSelectedId(created.id)
     },
   })
 
@@ -77,9 +59,6 @@ export function useProfiles(): UseProfilesResult {
       queryClient.setQueryData<Array<Profile>>(queryKeys.profiles.all, (previous) =>
         previous ? previous.filter((profile) => profile.id !== variables.id) : [],
       )
-      if (selectedId === variables.id) {
-        setSelectedId(null)
-      }
     },
   })
 
@@ -118,8 +97,6 @@ export function useProfiles(): UseProfilesResult {
 
   return {
     profiles,
-    selectedId,
-    select: setSelectedId,
     create: (input) => createMutation.mutateAsync(input),
     update: (input) => updateMutation.mutateAsync(input),
     remove: (input) => removeMutation.mutateAsync(input).then(() => undefined),

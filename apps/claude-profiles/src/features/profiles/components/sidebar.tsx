@@ -1,5 +1,5 @@
 import type { Ref } from 'react'
-import type { Profile } from '@/lib/types'
+import type { SidebarEntry } from '@/lib/types'
 
 import { useState } from 'react'
 
@@ -18,6 +18,9 @@ import { Cog, Plus } from 'lucide-react'
 
 import { ariaKeyshortcutsFor, Button, Kbd } from '@/design'
 
+import { entryId } from '../api/use-sidebar-entries'
+import { ManagedSidebarSwatch } from './managed-sidebar-swatch'
+import { OutlinedSwatch } from './outlined-swatch'
 import { SidebarBrandMark } from './sidebar-brand-mark'
 import { SidebarProfileRow } from './sidebar-profile-row'
 import { SidebarSearchInput } from './sidebar-search-input'
@@ -42,7 +45,7 @@ const restrictToScrollableAncestor: Modifier = ({ transform, draggingNodeRect, s
 }
 
 type Props = {
-  profiles: Array<Profile>
+  entries: Array<SidebarEntry>
   selectedId: string | null
   searchInputRef?: Ref<HTMLInputElement>
   onSelect: (id: string) => void
@@ -56,12 +59,25 @@ type Props = {
   onReorder?: (ids: Array<string>) => void
 }
 
-export function Sidebar({ profiles, selectedId, searchInputRef, onSelect, onCreate, onSettings, onReorder }: Props) {
+export function Sidebar({ entries, selectedId, searchInputRef, onSelect, onCreate, onSettings, onReorder }: Props) {
   const [query, setQuery] = useState('')
-  const filtered =
-    query.trim().length === 0
-      ? profiles
-      : profiles.filter((profile) => profile.name.toLowerCase().includes(query.trim().toLowerCase()))
+
+  const defaults = entries.filter(
+    (entry): entry is Extract<SidebarEntry, { kind: 'default' }> => entry.kind === 'default',
+  )
+  const managed = entries.filter(
+    (entry): entry is Extract<SidebarEntry, { kind: 'managed' }> => entry.kind === 'managed',
+  )
+
+  const trimmedQuery = query.trim().toLowerCase()
+  const filteredDefaults =
+    trimmedQuery.length === 0
+      ? defaults
+      : defaults.filter((entry) => entry.entry.name.toLowerCase().includes(trimmedQuery))
+  const filteredManaged =
+    trimmedQuery.length === 0
+      ? managed
+      : managed.filter((managedEntry) => managedEntry.profile.name.toLowerCase().includes(trimmedQuery))
 
   const sensors = useSensors(
     // 6px activation distance means a normal click still selects; only
@@ -75,21 +91,21 @@ export function Sidebar({ profiles, selectedId, searchInputRef, onSelect, onCrea
     if (!over || active.id === over.id || !onReorder) {
       return
     }
-    const oldIndex = profiles.findIndex((profile) => profile.id === active.id)
-    const newIndex = profiles.findIndex((profile) => profile.id === over.id)
+    const oldIndex = managed.findIndex((managedEntry) => managedEntry.profile.id === active.id)
+    const newIndex = managed.findIndex((managedEntry) => managedEntry.profile.id === over.id)
     if (oldIndex === -1 || newIndex === -1) {
       return
     }
-    const next = [...profiles]
+    const next = [...managed]
     const [moved] = next.splice(oldIndex, 1)
     next.splice(newIndex, 0, moved)
-    onReorder(next.map((profile) => profile.id))
+    onReorder(next.map((managedEntry) => managedEntry.profile.id))
   }
 
   // Reorder requires (a) a handler, (b) an unfiltered list — dragging in a
   // filtered list would produce a confusing result on the canonical order,
-  // and (c) at least two rows — there's nothing to reorder otherwise.
-  const reorderable = onReorder !== undefined && query.trim().length === 0 && profiles.length > 1
+  // and (c) at least two managed rows — there's nothing to reorder otherwise.
+  const reorderable = onReorder !== undefined && query.trim().length === 0 && managed.length > 1
 
   return (
     <aside className="relative flex w-64 shrink-0 flex-col border-r border-border bg-cream-2 px-3 pt-11 pb-3">
@@ -98,59 +114,88 @@ export function Sidebar({ profiles, selectedId, searchInputRef, onSelect, onCrea
       <div className="px-2.5 pt-1.5 pb-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.1em] text-muted-strong">
         Profiles
       </div>
-      {reorderable ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis, restrictToScrollableAncestor]}
-          onDragEnd={handleDragEnd}
-          accessibility={{
-            announcements: {
-              onDragStart: ({ active }) => `Picked up ${activeName(profiles, active.id)}`,
-              onDragOver: ({ active, over }) =>
-                over
-                  ? `${activeName(profiles, active.id)} moved over ${activeName(profiles, over.id)}`
-                  : `${activeName(profiles, active.id)} is no longer over a droppable area`,
-              onDragEnd: ({ active, over }) =>
-                over
-                  ? `${activeName(profiles, active.id)} dropped onto ${activeName(profiles, over.id)}`
-                  : `${activeName(profiles, active.id)} drop cancelled`,
-              onDragCancel: ({ active }) => `Drag of ${activeName(profiles, active.id)} cancelled`,
-            },
-          }}
-        >
-          <SortableContext items={profiles.map((profile) => profile.id)} strategy={verticalListSortingStrategy}>
-            <ul aria-label="Profiles" className="flex flex-1 flex-col gap-px overflow-y-auto pr-0.5">
-              {profiles.map((profile, index) => (
-                <li key={profile.id}>
-                  <SortableProfileRow
-                    profile={profile}
-                    index={index}
-                    selected={profile.id === selectedId}
-                    onSelect={() => onSelect(profile.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
-      ) : (
-        <ul className="flex flex-1 flex-col gap-px overflow-y-auto pr-0.5">
-          {filtered.map((profile) => {
-            const index = profiles.indexOf(profile)
-            return (
-              <li key={profile.id}>
+      {/* Design choice: two separate <ul>s. Default entries are rendered in an
+          unsorted list above the managed list. Only the managed <ul> is wrapped
+          in a DndContext when reorderable — default rows are never draggable.
+          Tab-order flows correctly: defaults first, then managed rows below. */}
+      <div className="flex flex-1 flex-col gap-px overflow-y-auto pr-0.5">
+        {filteredDefaults.length > 0 ? (
+          <ul aria-label="Default profiles" className="flex flex-col gap-px">
+            {filteredDefaults.map((defaultSidebarEntry) => (
+              <li key={entryId(defaultSidebarEntry)}>
                 <SidebarProfileRow
-                  profile={profile}
-                  index={index}
-                  selected={profile.id === selectedId}
-                  onSelect={() => onSelect(profile.id)}
+                  name={defaultSidebarEntry.entry.name}
+                  swatch={<OutlinedSwatch size={10} />}
+                  surfaces={defaultSidebarEntry.entry.surfaces}
+                  selected={entryId(defaultSidebarEntry) === selectedId}
+                  onSelect={() => onSelect(entryId(defaultSidebarEntry))}
                 />
               </li>
-            )
-          })}
-        </ul>
-      )}
+            ))}
+          </ul>
+        ) : null}
+        {reorderable ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis, restrictToScrollableAncestor]}
+            onDragEnd={handleDragEnd}
+            accessibility={{
+              announcements: {
+                onDragStart: ({ active }) => `Picked up ${activeName(managed, active.id)}`,
+                onDragOver: ({ active, over }) =>
+                  over
+                    ? `${activeName(managed, active.id)} moved over ${activeName(managed, over.id)}`
+                    : `${activeName(managed, active.id)} is no longer over a droppable area`,
+                onDragEnd: ({ active, over }) =>
+                  over
+                    ? `${activeName(managed, active.id)} dropped onto ${activeName(managed, over.id)}`
+                    : `${activeName(managed, active.id)} drop cancelled`,
+                onDragCancel: ({ active }) => `Drag of ${activeName(managed, active.id)} cancelled`,
+              },
+            }}
+          >
+            <SortableContext
+              items={managed.map((managedEntry) => managedEntry.profile.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul aria-label="Managed profiles" className="flex flex-col gap-px">
+                {managed.map((managedEntry, index) => (
+                  <li key={managedEntry.profile.id}>
+                    <SortableProfileRow
+                      name={managedEntry.profile.name}
+                      swatch={<ManagedSidebarSwatch color={managedEntry.profile.color} />}
+                      surfaces={managedEntry.profile.surfaces}
+                      selected={managedEntry.profile.id === selectedId}
+                      shortcutIndex={index}
+                      sortableId={managedEntry.profile.id}
+                      onSelect={() => onSelect(managedEntry.profile.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <ul aria-label="Managed profiles" className="flex flex-col gap-px">
+            {filteredManaged.map((managedEntry) => {
+              const index = managed.indexOf(managedEntry)
+              return (
+                <li key={managedEntry.profile.id}>
+                  <SidebarProfileRow
+                    name={managedEntry.profile.name}
+                    swatch={<ManagedSidebarSwatch color={managedEntry.profile.color} />}
+                    surfaces={managedEntry.profile.surfaces}
+                    selected={managedEntry.profile.id === selectedId}
+                    shortcutIndex={index}
+                    onSelect={() => onSelect(managedEntry.profile.id)}
+                  />
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
       <footer className="mt-2 flex items-center gap-2 border-t border-border pt-2.5">
         <Button
           variant="primary"
@@ -178,7 +223,7 @@ export function Sidebar({ profiles, selectedId, searchInputRef, onSelect, onCrea
   )
 }
 
-function activeName(profiles: Array<Profile>, id: string | number): string {
-  const match = profiles.find((profile) => profile.id === id)
-  return match ? match.name : String(id)
+function activeName(managedEntries: Array<Extract<SidebarEntry, { kind: 'managed' }>>, id: string | number): string {
+  const match = managedEntries.find((managedEntry) => managedEntry.profile.id === id)
+  return match ? match.profile.name : String(id)
 }
