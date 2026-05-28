@@ -1,4 +1,5 @@
 use std::path::Path;
+#[cfg(target_os = "macos")]
 use std::process::Command;
 
 use serde::Deserialize;
@@ -12,6 +13,7 @@ use crate::usage::QuotaError;
 const MAX_CREDENTIALS_BYTES: u64 = 64 * 1024;
 
 /// Hard cap on the keychain secret size. The real secret is well under 1 KiB.
+#[cfg(target_os = "macos")]
 const MAX_KEYCHAIN_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Deserialize, Default)]
@@ -32,8 +34,14 @@ struct ClaudeOauth {
 ///
 /// Order:
 /// 1. `<cli_config_dir>/.credentials.json` (Linux/Windows; older macOS Claude Code).
-/// 2. macOS Keychain, querying `Claude Code-credentials-<sha256(cli_config_dir)[:8]>`
-///    against the current user (newer Claude Code on macOS — the default).
+/// 2. macOS only: Keychain, querying
+///    `Claude Code-credentials-<sha256(cli_config_dir)[:8]>` against the
+///    current user (newer Claude Code on macOS — the default).
+///
+/// On non-macOS platforms the keychain step is skipped — if the file
+/// isn't present we return `NoCredentials` so the UI shows the standard
+/// "sign in to Claude Code once with this profile" message rather than
+/// failing as `Unknown` from a missing `/usr/bin/security`.
 ///
 /// On any failure returns a categorised `QuotaError`. Never panics.
 pub fn read_access_token(cli_config_dir: &Path) -> Result<String, QuotaError> {
@@ -62,6 +70,7 @@ fn read_from_file(path: &Path) -> Result<String, QuotaError> {
     extract_token(&raw)
 }
 
+#[cfg(target_os = "macos")]
 fn read_from_keychain(cli_config_dir: &Path) -> Result<String, QuotaError> {
     let service = keychain_service_name(cli_config_dir);
     // Account name is the current macOS user. Fall back to the empty
@@ -96,6 +105,15 @@ fn read_from_keychain(cli_config_dir: &Path) -> Result<String, QuotaError> {
         Err(_) => return Err(QuotaError::Unknown),
     };
     extract_token(raw.trim())
+}
+
+/// Non-macOS stub: there's no Apple Keychain to query, so if the
+/// credentials file wasn't present the user simply hasn't signed in
+/// to Claude Code on this profile yet. Surfacing `NoCredentials` keeps
+/// the UI consistent across platforms.
+#[cfg(not(target_os = "macos"))]
+fn read_from_keychain(_cli_config_dir: &Path) -> Result<String, QuotaError> {
+    Err(QuotaError::NoCredentials)
 }
 
 /// Pure: compute the macOS Keychain service name Claude Code uses for
@@ -244,19 +262,17 @@ mod tests {
     // -- cascade behavior --
 
     #[test]
-    fn missing_file_cascades_to_keychain_then_no_credentials_when_not_present() {
-        // No credentials file → falls through to keychain → keychain
-        // entry won't exist for this random tempdir path → NoCredentials.
-        // This is an integration check: it runs `security` against a
-        // tempdir-derived service name that won't exist. On non-macOS
-        // platforms `security` isn't available and `Command::new` will
-        // fail with Unknown — accept either NoCredentials or Unknown
-        // here so the test passes in CI on Linux too.
+    fn missing_file_returns_no_credentials() {
+        // No credentials file → on macOS we fall through to keychain
+        // (no entry exists for a random tempdir → exit 44 → NoCredentials);
+        // on other platforms the keychain step is stubbed out and we
+        // return NoCredentials directly. Either way the user sees the
+        // same "sign in once" message.
         let dir = TempDir::new().unwrap();
         let outcome = read_access_token(dir.path()).unwrap_err();
         assert!(
-            matches!(outcome, QuotaError::NoCredentials | QuotaError::Unknown),
-            "expected NoCredentials or Unknown, got {outcome:?}",
+            matches!(outcome, QuotaError::NoCredentials),
+            "expected NoCredentials, got {outcome:?}",
         );
     }
 

@@ -89,6 +89,10 @@ fn find_claude_binary_in(
         fallbacks.push(home.join(".local").join("bin").join("claude"));
         fallbacks.push(home.join(".claude").join("local").join("claude"));
     }
+    // `/opt/homebrew/bin` is Apple Silicon Homebrew specifically — only
+    // probe it on macOS. `/usr/local/bin` is a common install location
+    // on both macOS (Intel Homebrew) and Linux, so we keep it everywhere.
+    #[cfg(target_os = "macos")]
     fallbacks.push(PathBuf::from("/opt/homebrew/bin/claude"));
     fallbacks.push(PathBuf::from("/usr/local/bin/claude"));
     fallbacks.into_iter().find(|candidate| candidate.is_file())
