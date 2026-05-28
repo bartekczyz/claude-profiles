@@ -120,9 +120,19 @@ fn extract_token(raw: &str) -> Result<String, QuotaError> {
         Ok(value) => value,
         Err(_) => return Err(QuotaError::Unknown),
     };
+    // Trim whitespace from the stored token before returning it. A
+    // trailing newline or stray space would otherwise be sent as part
+    // of the `Authorization: Bearer …` header and rejected as 401.
     match parsed.claude_ai_oauth.access_token {
-        Some(token) if !token.trim().is_empty() => Ok(token),
-        _ => Err(QuotaError::NoCredentials),
+        Some(token) => {
+            let trimmed = token.trim();
+            if trimmed.is_empty() {
+                Err(QuotaError::NoCredentials)
+            } else {
+                Ok(trimmed.to_string())
+            }
+        }
+        None => Err(QuotaError::NoCredentials),
     }
 }
 
@@ -256,5 +266,13 @@ mod tests {
     fn extract_token_parses_keychain_style_blob() {
         let blob = r#"{"claudeAiOauth":{"accessToken":"sk-ant-from-keychain","refreshToken":"sk-ant-refresh","email":"x@y.z","expiresAt":1234567890000}}"#;
         assert_eq!(extract_token(blob).unwrap(), "sk-ant-from-keychain");
+    }
+
+    #[test]
+    fn extract_token_trims_surrounding_whitespace() {
+        // A trailing newline or stray space in the stored value would
+        // otherwise be sent as part of the Bearer header and 401.
+        let blob = r#"{"claudeAiOauth":{"accessToken":"  sk-ant-padded \n"}}"#;
+        assert_eq!(extract_token(blob).unwrap(), "sk-ant-padded");
     }
 }

@@ -44,7 +44,7 @@ impl ReqwestUsageClient {
 #[async_trait]
 impl UsageClient for ReqwestUsageClient {
     async fn fetch(&self, access_token: &str) -> Result<HttpResponse, QuotaError> {
-        let response = self
+        let mut response = self
             .client
             .get(USAGE_URL)
             .bearer_auth(access_token)
@@ -55,14 +55,33 @@ impl UsageClient for ReqwestUsageClient {
             .await
             .map_err(|_| QuotaError::Network)?;
         let status = response.status().as_u16();
-        let bytes = response.bytes().await.map_err(|_| QuotaError::Network)?;
-        if bytes.len() > MAX_BODY_BYTES {
-            return Err(QuotaError::Unknown);
+
+        // Pre-flight cap: if the server advertises a body larger than
+        // we're willing to read, refuse before buffering a single byte.
+        // The real response is well under 1 KiB so this only ever fires
+        // on a misconfigured/hostile endpoint.
+        if let Some(content_length) = response.content_length() {
+            if content_length > MAX_BODY_BYTES as u64 {
+                return Err(QuotaError::Unknown);
+            }
         }
-        Ok(HttpResponse {
-            status,
-            body: bytes.to_vec(),
-        })
+
+        // Streamed read with a running cap, so a server that omits
+        // Content-Length (or lies about it) still can't OOM us.
+        let mut body: Vec<u8> = Vec::new();
+        loop {
+            match response.chunk().await {
+                Ok(Some(chunk)) => {
+                    if body.len().saturating_add(chunk.len()) > MAX_BODY_BYTES {
+                        return Err(QuotaError::Unknown);
+                    }
+                    body.extend_from_slice(&chunk);
+                }
+                Ok(None) => break,
+                Err(_) => return Err(QuotaError::Network),
+            }
+        }
+        Ok(HttpResponse { status, body })
     }
 }
 
@@ -80,7 +99,12 @@ pub async fn fetch_quota(
         401 | 403 => Err(QuotaError::Unauthorized),
         429 => Err(QuotaError::RateLimited),
         500..=599 => Err(QuotaError::Network),
-        _ => Err(QuotaError::Network),
+        // Other 4xx (400 bad request, 404 endpoint moved, 410 gone, …)
+        // are client-side / contract-shape problems that won't resolve
+        // by retrying — surface them as `Unknown` so the UI shows
+        // "Couldn't load usage stats" rather than "check your connection".
+        400..=499 => Err(QuotaError::Unknown),
+        _ => Err(QuotaError::Unknown),
     }
 }
 
@@ -246,6 +270,35 @@ mod tests {
         assert!(matches!(
             fetch_quota(dir.path(), &client).await.unwrap_err(),
             QuotaError::RateLimited,
+        ));
+    }
+
+    #[tokio::test]
+    async fn bad_request_maps_to_unknown_not_network() {
+        // 400 from a deprecated beta header or schema drift should
+        // surface as Unknown so the UI doesn't show "check your
+        // connection" for what is actually a permanent contract break.
+        let dir = dir_with_token();
+        let client = StubClient {
+            status: 400,
+            body: b"".to_vec(),
+        };
+        assert!(matches!(
+            fetch_quota(dir.path(), &client).await.unwrap_err(),
+            QuotaError::Unknown,
+        ));
+    }
+
+    #[tokio::test]
+    async fn not_found_maps_to_unknown_not_network() {
+        let dir = dir_with_token();
+        let client = StubClient {
+            status: 404,
+            body: b"".to_vec(),
+        };
+        assert!(matches!(
+            fetch_quota(dir.path(), &client).await.unwrap_err(),
+            QuotaError::Unknown,
         ));
     }
 
