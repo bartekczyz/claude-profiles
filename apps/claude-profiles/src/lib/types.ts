@@ -17,6 +17,17 @@ export type Profile = {
   lastUsedAt: string | null
 }
 
+export type DefaultEntryApp = 'claude'
+
+export type DefaultEntry = {
+  id: string
+  app: DefaultEntryApp
+  name: string
+  surfaces: Surfaces
+}
+
+export type SidebarEntry = { kind: 'managed'; profile: Profile } | { kind: 'default'; entry: DefaultEntry }
+
 export type ActivityKind =
   | 'created'
   | 'renamed'
