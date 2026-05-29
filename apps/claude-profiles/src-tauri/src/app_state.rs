@@ -30,6 +30,8 @@ pub struct AppState {
     pub path_banner_dismissed_at: Option<String>,
     #[serde(default)]
     pub theme_mode: ThemeMode,
+    #[serde(default)]
+    pub selected_entry_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -47,6 +49,10 @@ pub struct AppStatePatch {
     pub clear_migration_dismissed: bool,
     #[serde(default)]
     pub clear_path_banner_dismissed: bool,
+    #[serde(default)]
+    pub selected_entry_id: Option<String>,
+    #[serde(default)]
+    pub clear_selected_entry_id: bool,
 }
 
 pub fn load() -> AppResult<AppState> {
@@ -87,6 +93,11 @@ pub fn apply(patch: AppStatePatch) -> AppResult<AppState> {
     }
     if let Some(theme) = patch.theme_mode {
         state.theme_mode = theme;
+    }
+    if patch.clear_selected_entry_id {
+        state.selected_entry_id = None;
+    } else if patch.selected_entry_id.is_some() {
+        state.selected_entry_id = patch.selected_entry_id;
     }
     save(&state)?;
     Ok(state)
@@ -161,6 +172,7 @@ mod tests {
             migration_dismissed_at: Some("2026-05-20T12:00:00Z".into()),
             path_banner_dismissed_at: None,
             theme_mode: ThemeMode::default(),
+            selected_entry_id: None,
         };
         save(&state).unwrap();
         let loaded = load().unwrap();
@@ -177,6 +189,7 @@ mod tests {
             migration_dismissed_at: Some("old".into()),
             path_banner_dismissed_at: None,
             theme_mode: ThemeMode::default(),
+            selected_entry_id: None,
         })
         .unwrap();
 
@@ -199,6 +212,7 @@ mod tests {
             migration_dismissed_at: Some("set".into()),
             path_banner_dismissed_at: Some("set".into()),
             theme_mode: ThemeMode::default(),
+            selected_entry_id: None,
         })
         .unwrap();
 
@@ -225,6 +239,48 @@ mod tests {
         .unwrap();
         let loaded = load().unwrap();
         assert!(loaded.welcome_shown);
+        purge();
+    }
+
+    #[test]
+    fn default_state_selected_entry_id_is_none() {
+        let state = AppState::default();
+        assert_eq!(state.selected_entry_id, None);
+    }
+
+    #[test]
+    fn apply_persists_selected_entry_id() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge();
+        let after = apply(AppStatePatch {
+            selected_entry_id: Some("profile-abc".into()),
+            ..AppStatePatch::default()
+        })
+        .unwrap();
+        assert_eq!(after.selected_entry_id.as_deref(), Some("profile-abc"));
+        let reloaded = load().unwrap();
+        assert_eq!(reloaded.selected_entry_id.as_deref(), Some("profile-abc"));
+        purge();
+    }
+
+    #[test]
+    fn apply_can_clear_selected_entry_id() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge();
+        save(&AppState {
+            welcome_shown: true,
+            migration_dismissed_at: None,
+            path_banner_dismissed_at: None,
+            theme_mode: ThemeMode::default(),
+            selected_entry_id: Some("profile-xyz".into()),
+        })
+        .unwrap();
+        let after = apply(AppStatePatch {
+            clear_selected_entry_id: true,
+            ..AppStatePatch::default()
+        })
+        .unwrap();
+        assert_eq!(after.selected_entry_id, None);
         purge();
     }
 }

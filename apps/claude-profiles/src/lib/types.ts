@@ -17,6 +17,17 @@ export type Profile = {
   lastUsedAt: string | null
 }
 
+export type DefaultEntryApp = 'claude'
+
+export type DefaultEntry = {
+  id: string
+  app: DefaultEntryApp
+  name: string
+  surfaces: Surfaces
+}
+
+export type SidebarEntry = { kind: 'managed'; profile: Profile } | { kind: 'default'; entry: DefaultEntry }
+
 export type ActivityKind =
   | 'created'
   | 'renamed'
@@ -48,8 +59,8 @@ export type ProfilePaths = {
   dataDir: string
   guiDataDir: string
   cliConfigDir: string
-  guiLauncherPath: string
-  cliWrapperPath: string
+  guiLauncherPath: string | null
+  cliWrapperPath: string | null
 }
 
 export type ExistingInstallInfo = {
@@ -106,6 +117,7 @@ export type AppState = {
   migrationDismissedAt: string | null
   pathBannerDismissedAt: string | null
   themeMode: ThemeMode
+  selectedEntryId: string | null
 }
 
 export type AppStatePatch = {
@@ -115,6 +127,8 @@ export type AppStatePatch = {
   themeMode?: ThemeMode
   clearMigrationDismissed?: boolean
   clearPathBannerDismissed?: boolean
+  selectedEntryId?: string | null
+  clearSelectedEntryId?: boolean
 }
 
 /**

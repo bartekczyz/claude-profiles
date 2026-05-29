@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+import type { SidebarEntry } from '@/lib/types'
+
 import { Activity, Suspense, useEffect, useRef, useState } from 'react'
 
 import { useHotkey } from '@tanstack/react-hotkeys'
@@ -12,17 +14,19 @@ import { CommandPalette } from '@/features/command-palette/components/command-pa
 import { useCommandPalette } from '@/features/command-palette/use-command-palette'
 import { useDependencies } from '@/features/dependencies/api/use-dependencies'
 import { useMigration } from '@/features/migration/api/use-migration'
-import { ChooseStartDialog } from '@/features/migration/components/choose-start-dialog'
 import { MigrationDialog } from '@/features/migration/components/migration-dialog'
 import { PathSetupBanner } from '@/features/onboarding/components/path-setup-banner'
 import { WelcomeDialog } from '@/features/onboarding/components/welcome-dialog'
 import { useProfileLastUsed } from '@/features/profiles/api/use-profile-last-used'
 import { useProfiles } from '@/features/profiles/api/use-profiles'
+import { entryId, useSidebarEntries } from '@/features/profiles/api/use-sidebar-entries'
+import { useSidebarSelection } from '@/features/profiles/api/use-sidebar-selection'
 import { CreateProfileDialog } from '@/features/profiles/components/create-profile-dialog'
 import { DeleteProfileDialog } from '@/features/profiles/components/delete-profile-dialog'
 import { EditProfileDialog } from '@/features/profiles/components/edit-profile-dialog'
 import { EmptyStateScreen } from '@/features/profiles/components/empty-state-screen'
 import { ProfileDetail } from '@/features/profiles/components/profile-detail'
+import { DefaultProfileDetail } from '@/features/profiles/components/profile-detail-default'
 import { ProfileDetailSkeleton } from '@/features/profiles/components/profile-detail-skeleton'
 import { Sidebar } from '@/features/profiles/components/sidebar'
 import { SidebarSkeleton } from '@/features/profiles/components/sidebar-skeleton'
@@ -32,13 +36,7 @@ import { UpdateToastTrigger } from '@/features/updater/components/update-toast-t
 import { useAppState } from '@/lib/app-state/use-app-state'
 import { QueryErrorBoundary } from '@/lib/query/error-boundary'
 
-type DialogState =
-  | { kind: 'none' }
-  | { kind: 'choose-start' }
-  | { kind: 'create' }
-  | { kind: 'edit' }
-  | { kind: 'delete' }
-  | { kind: 'about' }
+type DialogState = { kind: 'none' } | { kind: 'create' } | { kind: 'edit' } | { kind: 'delete' } | { kind: 'about' }
 
 type RightPane = { kind: 'profile' } | { kind: 'settings' }
 
@@ -89,6 +87,8 @@ function SelectByIndexHotkey({ index, enabled, onSelect }: SelectByIndexHotkeyPr
 
 function AppContent() {
   const profiles = useProfiles()
+  const entries = useSidebarEntries()
+  const selection = useSidebarSelection(entries)
   const migration = useMigration()
   const appState = useAppState()
   const dependencies = useDependencies()
@@ -178,7 +178,8 @@ function AppContent() {
     return () => node.removeEventListener('mousedown', handleMouseDown)
   }, [])
 
-  const selected = profiles.profiles.find((profile) => profile.id === profiles.selectedId) ?? null
+  const selected = entries.find((entry) => entryId(entry) === selection.selectedId) ?? null
+  const managedSelected = selected?.kind === 'managed' ? selected.profile : null
 
   const shouldShowWelcome = !appState.state.welcomeShown
 
@@ -219,7 +220,7 @@ function AppContent() {
   // being mounted (empty-state owns the whole window with no sidebar)
   // and no overlay being on top.
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const sidebarVisible = profiles.profiles.length > 0
+  const sidebarVisible = entries.length > 0
   useShortcut(
     'focus-search',
     () => {
@@ -229,74 +230,75 @@ function AppContent() {
     { enabled: !overlayOpen && sidebarVisible },
   )
 
-  // Detail-scope shortcuts — gated on a profile being selected, the
+  // Detail-scope shortcuts — gated on a managed profile being selected, the
   // detail pane being on top, and no overlay (dialog/palette/migration)
-  // covering it.
+  // covering it. Default rows don't support edit/delete/launch/copy.
   useShortcut(
     'edit-selected',
     () => {
-      if (selected) {
+      if (managedSelected) {
         setDialog({ kind: 'edit' })
       }
     },
-    { enabled: detailEnabled },
+    { enabled: detailEnabled && managedSelected !== null },
   )
   useShortcut(
     'delete-selected',
     () => {
-      if (selected) {
+      if (managedSelected) {
         setDialog({ kind: 'delete' })
       }
     },
-    { enabled: detailEnabled },
+    { enabled: detailEnabled && managedSelected !== null },
   )
   useShortcut(
     'open-selected-desktop',
     () => {
-      if (selected?.surfaces.gui) {
-        void lastUsed.launchDesktop(selected.id)
+      if (managedSelected?.surfaces.gui) {
+        void lastUsed.launchDesktop(managedSelected.id)
       }
     },
-    { enabled: detailEnabled },
+    { enabled: detailEnabled && managedSelected !== null },
   )
   useShortcut(
     'copy-selected-cli',
     () => {
-      if (selected?.surfaces.cli) {
-        void lastUsed.copyCli({ profileId: selected.id, command: `claude-${selected.slug}` })
+      if (managedSelected?.surfaces.cli) {
+        void lastUsed.copyCli({ profileId: managedSelected.id, command: `claude-${managedSelected.slug}` })
       }
     },
-    { enabled: detailEnabled },
+    { enabled: detailEnabled && managedSelected !== null },
   )
 
   async function handleCreate(input: Parameters<typeof profiles.create>[0]) {
     setSubmitting(true)
     try {
-      await profiles.create(input)
+      const created = await profiles.create(input)
+      selection.select(created.id)
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleEdit(input: { name: string; color: string; surfaces: { gui: boolean; cli: boolean } }) {
-    if (!selected) {
+    if (!managedSelected) {
       return
     }
     setSubmitting(true)
     try {
-      const nameChanged = input.name !== selected.name
-      const colorChanged = input.color.toLowerCase() !== selected.color.toLowerCase()
+      const nameChanged = input.name !== managedSelected.name
+      const colorChanged = input.color.toLowerCase() !== managedSelected.color.toLowerCase()
       if (nameChanged || colorChanged) {
         await profiles.update({
-          id: selected.id,
+          id: managedSelected.id,
           patch: { name: input.name, color: input.color },
         })
       }
-      if (input.surfaces.gui !== selected.surfaces.gui) {
-        await profiles.toggle({ id: selected.id, surface: 'gui', enabled: input.surfaces.gui })
+      if (input.surfaces.gui !== managedSelected.surfaces.gui) {
+        await profiles.toggle({ id: managedSelected.id, surface: 'gui', enabled: input.surfaces.gui })
       }
-      if (input.surfaces.cli !== selected.surfaces.cli) {
-        await profiles.toggle({ id: selected.id, surface: 'cli', enabled: input.surfaces.cli })
+      if (input.surfaces.cli !== managedSelected.surfaces.cli) {
+        await profiles.toggle({ id: managedSelected.id, surface: 'cli', enabled: input.surfaces.cli })
       }
     } finally {
       setSubmitting(false)
@@ -304,17 +306,13 @@ function AppContent() {
   }
 
   async function handleDelete(input: { moveToTrash: boolean }) {
-    if (!selected) {
+    if (!managedSelected) {
       return
     }
-    await profiles.remove({ id: selected.id, ...input })
+    await profiles.remove({ id: managedSelected.id, ...input })
   }
 
   function requestCreateProfile() {
-    if (profiles.profiles.length === 0 && migration.anyDetected) {
-      setDialog({ kind: 'choose-start' })
-      return
-    }
     setDialog({ kind: 'create' })
   }
 
@@ -329,10 +327,10 @@ function AppContent() {
     )
   }
 
-  // The empty-state screen owns the whole window when there are no profiles
-  // yet — no sidebar, no panes. As soon as the first profile lands, the
-  // sidebar appears and the detail pane takes over.
-  const isEmpty = profiles.profiles.length === 0
+  // The empty-state screen owns the whole window when there are no entries
+  // yet — no sidebar, no panes. As soon as the first profile/default entry
+  // lands, the sidebar appears and the detail pane takes over.
+  const isEmpty = entries.length === 0
 
   return (
     <div className="relative flex h-full flex-col">
@@ -373,11 +371,11 @@ function AppContent() {
       ) : (
         <div className="flex min-h-0 flex-1">
           <Sidebar
-            profiles={profiles.profiles}
-            selectedId={profiles.selectedId}
+            entries={entries}
+            selectedId={selection.selectedId}
             searchInputRef={searchInputRef}
             onSelect={(id) => {
-              profiles.select(id)
+              selection.select(id)
               setRightPane({ kind: 'profile' })
             }}
             onCreate={requestCreateProfile}
@@ -392,14 +390,24 @@ function AppContent() {
               — the header, danger link, and hint strip render with sidebar-provided
               data immediately. */}
           <Activity mode={rightPane.kind === 'profile' && selected !== null ? 'visible' : 'hidden'}>
-            {selected ? (
+            {selected?.kind === 'managed' ? (
               <QueryErrorBoundary>
                 <ProfileDetail
-                  profile={selected}
+                  profile={selected.profile}
                   onEdit={() => setDialog({ kind: 'edit' })}
                   onDelete={() => setDialog({ kind: 'delete' })}
                   onToggle={async (surface, enabled) => {
-                    await profiles.toggle({ id: selected.id, surface, enabled })
+                    await profiles.toggle({ id: selected.profile.id, surface, enabled })
+                  }}
+                />
+              </QueryErrorBoundary>
+            ) : selected?.kind === 'default' ? (
+              <QueryErrorBoundary>
+                <DefaultProfileDetail
+                  entry={selected.entry}
+                  onMigrate={async () => {
+                    await migration.refresh()
+                    setForceMigrationOpen(true)
                   }}
                 />
               </QueryErrorBoundary>
@@ -429,20 +437,20 @@ function AppContent() {
         onClose={() => setDialog({ kind: 'none' })}
         onCreate={handleCreate}
       />
-      {selected ? (
+      {managedSelected ? (
         <EditProfileDialog
           open={dialog.kind === 'edit'}
-          profile={selected}
+          profile={managedSelected}
           dependencies={dependencies.deps}
           submitting={submitting}
           onClose={() => setDialog({ kind: 'none' })}
           onSave={handleEdit}
         />
       ) : null}
-      {selected ? (
+      {managedSelected ? (
         <DeleteProfileDialog
           open={dialog.kind === 'delete'}
-          profile={selected}
+          profile={managedSelected}
           onClose={() => setDialog({ kind: 'none' })}
           onConfirm={handleDelete}
         />
@@ -451,16 +459,6 @@ function AppContent() {
       <Suspense fallback={null}>
         <AboutDialog open={dialog.kind === 'about'} onClose={() => setDialog({ kind: 'none' })} />
       </Suspense>
-
-      <ChooseStartDialog
-        open={dialog.kind === 'choose-start'}
-        onMigrate={() => {
-          setDialog({ kind: 'none' })
-          setForceMigrationOpen(true)
-        }}
-        onCreate={() => setDialog({ kind: 'create' })}
-        onClose={() => setDialog({ kind: 'none' })}
-      />
 
       {showMigration ? (
         <MigrationDialog
@@ -472,7 +470,7 @@ function AppContent() {
           onImport={async (input) => {
             const imported = await migration.import(input)
             await profiles.refresh()
-            profiles.select(imported.id)
+            selection.select(imported.id)
             setForceMigrationOpen(false)
             setRightPane({ kind: 'profile' })
             return imported
@@ -480,33 +478,36 @@ function AppContent() {
         />
       ) : null}
 
-      {/* Mod+1..Mod+9 — one binding per visible profile slot. Disabled when
-          any overlay is open to avoid stealing keystrokes from the
-          dialog/palette/migration prompt. */}
-      {profiles.profiles.slice(0, 9).map((profile, index) => (
-        <SelectByIndexHotkey
-          key={profile.id}
-          index={index}
-          enabled={!overlayOpen}
-          onSelect={() => {
-            profiles.select(profile.id)
-            setRightPane({ kind: 'profile' })
-          }}
-        />
-      ))}
+      {/* Mod+1..Mod+9 — one binding per managed profile slot (default row
+          is not numbered). Disabled when any overlay is open to avoid
+          stealing keystrokes from the dialog/palette/migration prompt. */}
+      {entries
+        .filter((entry): entry is Extract<SidebarEntry, { kind: 'managed' }> => entry.kind === 'managed')
+        .slice(0, 9)
+        .map((managedEntry, index) => (
+          <SelectByIndexHotkey
+            key={managedEntry.profile.id}
+            index={index}
+            enabled={!overlayOpen}
+            onSelect={() => {
+              selection.select(managedEntry.profile.id)
+              setRightPane({ kind: 'profile' })
+            }}
+          />
+        ))}
 
       <CommandPalette
         open={palette.open}
-        profiles={profiles.profiles}
-        selectedId={profiles.selectedId}
+        entries={entries}
+        selectedId={selection.selectedId}
         dependencies={dependencies.deps}
         onClose={palette.close}
         onSwitch={(id) => {
-          profiles.select(id)
+          selection.select(id)
           setRightPane({ kind: 'profile' })
         }}
-        onLaunch={(id) => {
-          void lastUsed.launchDesktop(id)
+        onLaunch={(profileId) => {
+          void lastUsed.launchDesktop(profileId)
         }}
         onCopy={(profile) => {
           void lastUsed.copyCli({ profileId: profile.id, command: `claude-${profile.slug}` })

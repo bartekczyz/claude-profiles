@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 
@@ -143,6 +144,29 @@ pub fn open_in_finder(path: String) -> AppResult<()> {
     if !status.success() {
         return Err(AppError::Validation(format!(
             "`open -R {path}` exited with status {status}"
+        )));
+    }
+    Ok(())
+}
+
+/// Launch an application bundle by its path using macOS's `open` command.
+///
+/// Unlike `open_profile_in_app`, this operates on the pre-resolved path
+/// rather than a managed-profile ID, so it works for the default Claude
+/// entry whose launcher lives at the detected system path.
+#[tauri::command]
+pub fn open_app(path: String) -> AppResult<()> {
+    let target = std::path::Path::new(&path);
+    if !target.exists() {
+        return Err(AppError::NotFound(format!("path does not exist: {path}")));
+    }
+    let status = Command::new("open")
+        .arg(&path)
+        .status()
+        .map_err(AppError::Io)?;
+    if !status.success() {
+        return Err(AppError::Validation(format!(
+            "`open {path}` exited with status {status}"
         )));
     }
     Ok(())
@@ -418,10 +442,38 @@ static REFRESHER: OnceLock<usage::refresh::ClaudeCliRefresher> = OnceLock::new()
 
 #[tauri::command]
 pub async fn get_profile_usage(profile_id: String) -> AppResult<ProfileUsage> {
-    let profile_root = profile_data_dir(&profile_id)?;
-    let cli_config = profile_root.join("cli-config");
+    let cli_config = resolve_cli_config_dir(&profile_id)?;
     let client = ReqwestUsageClient::new(format!("claude-profiles/{}", env!("CARGO_PKG_VERSION")))
         .map_err(|_| AppError::Io(std::io::Error::other("could not build HTTP client")))?;
     let refresher = REFRESHER.get_or_init(usage::refresh::ClaudeCliRefresher::new);
     Ok(usage::build_with_cli_refresh(&cli_config, &client, refresher).await)
+}
+
+fn resolve_cli_config_dir(profile_id: &str) -> AppResult<PathBuf> {
+    if profile_id == "default:claude" {
+        let home =
+            dirs::home_dir().ok_or_else(|| AppError::Io(std::io::Error::other("no home dir")))?;
+        return Ok(home.join(".claude"));
+    }
+    let profile_root = profile_data_dir(profile_id)?;
+    Ok(profile_root.join("cli-config"))
+}
+
+#[cfg(test)]
+mod usage_routing_tests {
+    use super::*;
+
+    #[test]
+    fn resolve_cli_config_dir_for_default_points_at_home_dot_claude() {
+        let resolved = resolve_cli_config_dir("default:claude").expect("home resolvable");
+        assert!(resolved.ends_with(".claude"));
+        let parent = resolved.parent().expect("has parent");
+        assert_eq!(parent, dirs::home_dir().unwrap().as_path());
+    }
+
+    #[test]
+    fn resolve_cli_config_dir_for_managed_id_is_per_profile() {
+        let resolved = resolve_cli_config_dir("some-managed-id").expect("ok");
+        assert!(resolved.ends_with("cli-config"));
+    }
 }

@@ -1,57 +1,46 @@
-import type { Profile } from '@/lib/types'
-
-import { formatDistanceToNow } from 'date-fns'
+import type { ReactNode } from 'react'
 
 import { ariaKeyshortcutsFor, Button, Kbd } from '@/design'
 
 type Props = {
-  profile: Profile
-  onEdit: () => void
+  name: string
+  swatch: ReactNode
+  subline?: ReactNode
+  onEdit?: () => void
 }
 
 /**
- * Header block: 44×44 inset-glossed swatch, profile name in display
- * weight, mono slug + last-used line, and a ghost Edit button (⌘E).
+ * Detail-page header chrome. The caller supplies the swatch (colour-filled
+ * for managed profiles, grey-outlined for the default entry) and the
+ * sub-line (slug + last-used for managed, bare command name for default).
+ * The Edit button only renders when `onEdit` is provided.
  */
-export function ProfileDetailHeader({ profile, onEdit }: Props) {
+export function ProfileDetailHeader({ name, swatch, subline, onEdit }: Props) {
   return (
     <header className="mb-5 flex items-start gap-4 border-b border-border-soft pb-5">
-      <ProfileSwatch color={profile.color} />
+      {swatch}
       <div className="min-w-0 flex-1 pt-px">
-        <h2 className="m-0 mb-1 text-display font-bold tracking-[-0.03em] text-ink leading-[1.05]">{profile.name}</h2>
-        <p className="font-mono text-[12px] tracking-[-0.005em] text-muted">
-          <span>{profile.slug}</span>
-          <span className="mx-2 text-border">·</span>
-          <span className="text-muted-strong">{formatLastUsed(profile.lastUsedAt)}</span>
-        </p>
+        <h2 className="m-0 mb-1 text-display font-bold tracking-[-0.03em] text-ink leading-[1.05]">{name}</h2>
+        {subline ? <p className="font-mono text-[12px] tracking-[-0.005em] text-muted">{subline}</p> : null}
       </div>
-      <div className="flex items-center gap-1 pt-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          trailingKbd={<Kbd shortcutId="edit-selected" />}
-          aria-keyshortcuts={ariaKeyshortcutsFor('edit-selected')}
-          onClick={onEdit}
-        >
-          Edit
-        </Button>
-      </div>
+      {onEdit ? (
+        <div className="flex items-center gap-1 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            trailingKbd={<Kbd shortcutId="edit-selected" />}
+            aria-keyshortcuts={ariaKeyshortcutsFor('edit-selected')}
+            onClick={onEdit}
+          >
+            Edit
+          </Button>
+        </div>
+      ) : null}
     </header>
   )
 }
 
-function formatLastUsed(timestamp: string | null): string {
-  if (!timestamp) {
-    return 'Never used'
-  }
-  const parsed = new Date(timestamp)
-  if (Number.isNaN(parsed.getTime())) {
-    return 'Never used'
-  }
-  return `Last used ${formatDistanceToNow(parsed, { addSuffix: true })}`
-}
-
-function ProfileSwatch({ color }: { color: string }) {
+export function ProfileSwatch({ color }: { color: string }) {
   return (
     <div
       aria-hidden

@@ -31,7 +31,7 @@ beforeEach(() => {
 })
 
 describe('useProfiles', () => {
-  it('loads profiles on mount and selects the first one', async () => {
+  it('loads profiles on mount', async () => {
     const fixture = profileFixture()
     mockInvoke.mockResolvedValueOnce([fixture])
 
@@ -39,10 +39,9 @@ describe('useProfiles', () => {
 
     await waitFor(() => expect(result.current).not.toBeNull())
     expect(result.current.profiles).toEqual([fixture])
-    expect(result.current.selectedId).toBe('1')
   })
 
-  it('create appends the returned profile and selects it', async () => {
+  it('create appends the returned profile', async () => {
     mockInvoke.mockResolvedValueOnce([])
     const { result } = renderHookWithQuery(() => useProfiles())
     await waitFor(() => expect(result.current).not.toBeNull())
@@ -59,7 +58,6 @@ describe('useProfiles', () => {
     })
 
     await waitFor(() => expect(result.current.profiles).toEqual([created]))
-    expect(result.current.selectedId).toBe('2')
   })
 
   it('update replaces the matching profile by id', async () => {
@@ -78,7 +76,7 @@ describe('useProfiles', () => {
     await waitFor(() => expect(result.current.profiles).toEqual([updated]))
   })
 
-  it('remove drops the profile and clears selection when it was selected', async () => {
+  it('remove drops the profile from the list', async () => {
     const fixture = profileFixture()
     mockInvoke.mockResolvedValueOnce([fixture])
     const { result } = renderHookWithQuery(() => useProfiles())
@@ -91,7 +89,6 @@ describe('useProfiles', () => {
     })
 
     await waitFor(() => expect(result.current.profiles).toEqual([]))
-    expect(result.current.selectedId).toBe(null)
   })
 
   it('toggle replaces the profile with the server response', async () => {

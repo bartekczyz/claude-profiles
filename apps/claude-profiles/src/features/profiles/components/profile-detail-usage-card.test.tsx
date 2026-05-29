@@ -231,4 +231,93 @@ describe('ProfileDetailUsageCard', () => {
     consoleError.mockRestore()
     consoleWarn.mockRestore()
   })
+
+  it('renders a hover tooltip with the absolute reset time for each window that has resetsAt', () => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage({
+        quota: {
+          fiveHour: { utilization: 40, resetsAt: '2099-06-15T14:30:00Z' },
+          sevenDay: { utilization: 10, resetsAt: '2099-06-22T09:00:00Z' },
+          sevenDaySonnet: { utilization: 5, resetsAt: null },
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    // Each window with resetsAt contributes a tooltip alongside its
+    // "resets in …" label. Tooltip content is the absolute datetime in
+    // the "EEE d MMM, HH:mm" pattern (locale-stable across CI hosts;
+    // hour digits and short day/month names are timezone-independent in
+    // shape even if absolute values shift).
+    const datetimePattern = /^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}, \d{2}:\d{2}$/
+    const tooltips = screen
+      .getAllByRole('tooltip')
+      .map((node) => node.textContent?.trim() ?? '')
+      .filter((text) => datetimePattern.test(text))
+    // 5h and weekly each emit one datetime tooltip; weekly Sonnet has
+    // no resetsAt so contributes nothing. The PaceMarker on the weekly
+    // window also emits a tooltip, but its content is "Even daily pace
+    // · N%" which the pattern filter excludes.
+    expect(tooltips).toHaveLength(2)
+  })
+
+  it('hides the Weekly Sonnet row when its utilization is zero', () => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage({
+        quota: {
+          fiveHour: { utilization: 40, resetsAt: null },
+          sevenDay: { utilization: 10, resetsAt: null },
+          sevenDaySonnet: { utilization: 0, resetsAt: null },
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    // Only 5-hour and weekly bars render; Weekly Sonnet is suppressed.
+    expect(screen.getAllByRole('progressbar')).toHaveLength(2)
+  })
+
+  it('keeps the Weekly Sonnet row visible when its utilization is unknown (null)', () => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage({
+        quota: {
+          fiveHour: { utilization: 40, resetsAt: null },
+          sevenDay: { utilization: 10, resetsAt: null },
+          sevenDaySonnet: { utilization: null, resetsAt: null },
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    // Unknown utilization is not the same as zero — we still surface
+    // the row (with a "—" placeholder) so the user can tell data is
+    // missing rather than confused with "no usage this week".
+    expect(screen.getAllByRole('progressbar')).toHaveLength(3)
+  })
+
+  it('omits the reset tooltip when resetsAt is null', () => {
+    ;(useProfileUsage as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: makeUsage({
+        quota: {
+          fiveHour: { utilization: 40, resetsAt: null },
+          sevenDay: { utilization: 10, resetsAt: null },
+          sevenDaySonnet: { utilization: 5, resetsAt: null },
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    })
+    renderWithQuery(<ProfileDetailUsageCard profileId="p1" cliEnabled={true} />)
+    const datetimePattern = /^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}, \d{2}:\d{2}$/
+    const tooltips = screen.queryAllByRole('tooltip')
+    const datetimeTooltips = tooltips.filter((node) => datetimePattern.test((node.textContent ?? '').trim()))
+    expect(datetimeTooltips).toHaveLength(0)
+  })
 })
