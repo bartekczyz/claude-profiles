@@ -3,7 +3,10 @@ import type { ProfileUsage, UsageWindow } from '@/lib/types'
 
 import { Component, useEffect, useState } from 'react'
 
+import { format } from 'date-fns'
 import { RefreshCw } from 'lucide-react'
+
+import { TooltipBubble } from '@/design'
 
 import { refetchIntervalMs, useProfileUsage } from '../api/use-profile-usage'
 
@@ -171,7 +174,7 @@ function Meter({
   const tone = percent === null ? 'muted' : percent < 50 ? 'ok' : percent < 80 ? 'warn' : 'crit'
   const barClass =
     tone === 'ok' ? 'bg-green' : tone === 'warn' ? 'bg-amber' : tone === 'crit' ? 'bg-red' : 'bg-muted-strong'
-  const resetsLabel = formatReset(meterWindow?.resetsAt ?? null)
+  const resetLabel = formatReset(meterWindow?.resetsAt ?? null)
   const pacePercent = showDailySegments ? computeWeeklyPacePercent(meterWindow?.resetsAt ?? null) : null
 
   return (
@@ -196,7 +199,12 @@ function Meter({
       </div>
       <span className="text-right font-mono text-mono tabular-nums text-muted-strong">
         {percent === null ? '—' : `${percent}%`}
-        {resetsLabel ? ` · ${resetsLabel}` : ''}
+        {resetLabel ? (
+          <span className="group relative inline-block">
+            {` · ${resetLabel.relative}`}
+            <TooltipBubble>{resetLabel.absolute}</TooltipBubble>
+          </span>
+        ) : null}
       </span>
     </div>
   )
@@ -225,12 +233,7 @@ function PaceMarker({ percent }: { percent: number }) {
       style={{ left: `calc(${clamped}% - 6px)` }}
     >
       <div aria-hidden className="pointer-events-none h-full w-0.5 rounded-sm bg-ink" />
-      <div
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-1 font-mono text-mono text-cream opacity-0 shadow-md transition-opacity group-hover:opacity-100"
-      >
-        Even daily pace · {Math.round(clamped)}%
-      </div>
+      <TooltipBubble>Even daily pace · {Math.round(clamped)}%</TooltipBubble>
     </div>
   )
 }
@@ -258,7 +261,14 @@ function computeWeeklyPacePercent(resetsAt: string | null): number | null {
   return ((windowMs - timeRemaining) / windowMs) * 100
 }
 
-function formatReset(resetsAt: string | null): string | null {
+type ResetLabel = {
+  /** Compact relative phrase used inline, e.g. "resets in 23h 59m". */
+  relative: string
+  /** Absolute datetime shown as the hover tooltip, e.g. "Sat 30 May, 14:30". */
+  absolute: string
+}
+
+function formatReset(resetsAt: string | null): ResetLabel | null {
   if (!resetsAt) {
     return null
   }
@@ -266,7 +276,13 @@ function formatReset(resetsAt: string | null): string | null {
   if (Number.isNaN(date.getTime())) {
     return null
   }
-  const deltaMs = date.getTime() - Date.now()
+  return {
+    relative: formatResetRelative(date.getTime() - Date.now()),
+    absolute: format(date, 'EEE d MMM, HH:mm'),
+  }
+}
+
+function formatResetRelative(deltaMs: number): string {
   if (deltaMs <= 0) {
     return 'resets soon'
   }
