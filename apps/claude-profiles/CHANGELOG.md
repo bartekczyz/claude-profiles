@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/bartekczyz/claude-profiles/compare/v0.5.0...v0.5.1) (2026-05-30)
+
+
+### Fixed
+
+* Default profile launch — open the stock app, single-instance per entry ([#24](https://github.com/bartekczyz/claude-profiles/issues/24)) ([80e7056](https://github.com/bartekczyz/claude-profiles/commit/80e705667615f8b8ff6f965217a3dd77ab4a02ca))
+
 ## [0.5.0](https://github.com/bartekczyz/claude-profiles/compare/v0.4.0...v0.5.0) (2026-05-29)
 
 
