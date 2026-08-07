@@ -2,7 +2,7 @@
 //! (Claude or Codex) and import it as a named profile.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -233,23 +233,129 @@ fn copy_dir_recursive(from: &Path, to: &Path) -> AppResult<()> {
             from.display()
         )));
     }
+    let root = normalize_lexically(from);
+    copy_tree(from, to, &root)
+}
+
+/// `root` is the top of the tree being copied, carried through the recursion so
+/// each symlink can be judged against it — see [`rebase_link_target`].
+fn copy_tree(from: &Path, to: &Path, root: &Path) -> AppResult<()> {
     fs::create_dir_all(to)?;
     for entry in fs::read_dir(from)? {
         let entry = entry?;
         let source_path = entry.path();
         let dest_path = to.join(entry.file_name());
+        // `file_type` comes from the directory entry, so a symlink to a
+        // directory reports `is_symlink`, not `is_dir` — links are never
+        // descended into.
         let file_type = entry.file_type()?;
         if file_type.is_dir() {
-            copy_dir_recursive(&source_path, &dest_path)?;
+            copy_tree(&source_path, &dest_path, root)?;
         } else if file_type.is_symlink() {
             // For symlinks, copy the link itself rather than resolving.
             let target = fs::read_link(&source_path)?;
-            std::os::unix::fs::symlink(&target, &dest_path)?;
+            std::os::unix::fs::symlink(
+                rebase_link_target(&source_path, &target, root),
+                &dest_path,
+            )?;
         } else {
             fs::copy(&source_path, &dest_path)?;
         }
     }
     Ok(())
+}
+
+/// Decide what a copied symlink should point at.
+///
+/// A relative target only means anything next to the link it came from, so the
+/// question is what it resolved to *before* the copy, and whether that lands
+/// inside the tree being copied.
+///
+/// - **Outside the tree** — pin it absolute at what it resolved to. This is the
+///   shape skill managers install (`~/.claude/skills/foo ->
+///   ../../.agents/skills/foo`); copied verbatim it would become
+///   `<profile>/cli-config/skills/foo -> <profile>/.agents/skills/foo`, so
+///   importing a real `~/.claude` used to yield a profile full of dangling
+///   skills.
+/// - **Inside the tree** — re-express it relative to the copied link, so it
+///   follows the *copy*. Keeping the original text is not enough: a target like
+///   `../../source/file` climbs out of the tree and back in by name, which still
+///   resolves after the copy but points at the original — which migration then
+///   moves into the backup dir, leaving the profile dangling anyway.
+///
+/// Absolute targets already survive the move and are passed through untouched.
+///
+/// Resolution is lexical, so a target routed through a symlinked *directory*
+/// inside the tree is judged by its spelling rather than where it truly lands.
+/// Following it would mean resolving links in a tree we are mid-copy of, for a
+/// case that does not arise in the configs this imports.
+fn rebase_link_target(link: &Path, target: &Path, root: &Path) -> PathBuf {
+    if target.is_absolute() {
+        return target.to_path_buf();
+    }
+    let Some(parent) = link.parent() else {
+        return target.to_path_buf();
+    };
+    let resolved = normalize_lexically(&parent.join(target));
+    if !resolved.starts_with(root) {
+        return resolved;
+    }
+    let relative = relative_path_between(&normalize_lexically(parent), &resolved);
+    if relative.as_os_str().is_empty() {
+        return PathBuf::from(".");
+    }
+    relative
+}
+
+/// Express `to` as a path relative to `from`.
+///
+/// Both sides are normalized and share `root` as a prefix, so the walk-up never
+/// climbs past it and the result stays inside the tree.
+fn relative_path_between(from: &Path, to: &Path) -> PathBuf {
+    let mut from_components = from.components().peekable();
+    let mut to_components = to.components().peekable();
+    while from_components.peek().is_some() && from_components.peek() == to_components.peek() {
+        from_components.next();
+        to_components.next();
+    }
+
+    let mut relative = PathBuf::new();
+    for _ in from_components {
+        relative.push("..");
+    }
+    for component in to_components {
+        relative.push(component.as_os_str());
+    }
+    relative
+}
+
+/// Resolve `.` and `..` purely lexically.
+///
+/// `canonicalize` is unusable here: link targets routinely name paths that do
+/// not exist, and it would also collapse intermediate symlinks the user put
+/// there deliberately. Lexical resolution is also what makes the containment
+/// test meaningful — `Path::starts_with` compares components, so an unresolved
+/// `.claude/skills/../../.agents` would look like it sits under `.claude`.
+fn normalize_lexically(path: &Path) -> PathBuf {
+    let mut kept: Vec<Component> = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => match kept.last() {
+                // Only a real directory name can be cancelled out. Popping a
+                // `..` instead would silently collapse `../../x` into `x`.
+                Some(Component::Normal(_)) => {
+                    kept.pop();
+                }
+                // `/..` is `/`, so an absolute path never climbs past the root.
+                Some(Component::RootDir) => {}
+                // A leading `..` on a relative path has nothing to cancel.
+                _ => kept.push(component),
+            },
+            other => kept.push(other),
+        }
+    }
+    kept.iter().collect()
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -592,6 +698,134 @@ mod tests {
             fs::read_to_string(dest.join("nested/deep/bottom.txt")).unwrap(),
             "bottom"
         );
+    }
+
+    /// The shape skill managers actually install: `~/.claude/skills/<name>` is a
+    /// relative link that climbs out of `~/.claude` into a sibling store. Copied
+    /// verbatim it would resolve to `<profile>/.agents/...` and dangle.
+    #[test]
+    fn copy_rewrites_relative_links_that_escape_the_copied_tree() {
+        let scratch = tempdir().unwrap();
+        let home = scratch.path().join("home");
+        let store = home.join(".agents/skills/grilling");
+        fs::create_dir_all(&store).unwrap();
+        fs::write(store.join("SKILL.md"), "# grilling").unwrap();
+        let claude = home.join(".claude");
+        fs::create_dir_all(claude.join("skills")).unwrap();
+        std::os::unix::fs::symlink(
+            "../../.agents/skills/grilling",
+            claude.join("skills/grilling"),
+        )
+        .unwrap();
+
+        let dest = scratch.path().join("cli-config");
+        copy_dir_recursive(&claude, &dest).unwrap();
+
+        let copied = dest.join("skills/grilling");
+        assert!(
+            fs::symlink_metadata(&copied).unwrap().is_symlink(),
+            "must stay a link, not become a copy"
+        );
+        assert_eq!(
+            fs::read_to_string(copied.join("SKILL.md")).unwrap(),
+            "# grilling",
+            "imported skill must still resolve"
+        );
+        assert_eq!(fs::read_link(&copied).unwrap(), store);
+    }
+
+    #[test]
+    fn copy_keeps_relative_links_that_stay_inside_the_copied_tree() {
+        let scratch = tempdir().unwrap();
+        let source = scratch.path().join("source");
+        fs::create_dir_all(source.join("skills")).unwrap();
+        fs::write(source.join("skills/real.md"), "real").unwrap();
+        std::os::unix::fs::symlink("real.md", source.join("skills/alias.md")).unwrap();
+
+        let dest = scratch.path().join("dest");
+        copy_dir_recursive(&source, &dest).unwrap();
+
+        let copied = dest.join("skills/alias.md");
+        assert_eq!(
+            fs::read_link(&copied).unwrap(),
+            PathBuf::from("real.md"),
+            "internal links must stay relative so the copy is self-contained"
+        );
+        assert_eq!(fs::read_to_string(&copied).unwrap(), "real");
+    }
+
+    #[test]
+    fn copy_preserves_absolute_link_targets() {
+        let scratch = tempdir().unwrap();
+        let outside = scratch.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("rule.md"), "rule").unwrap();
+        let source = scratch.path().join("source");
+        fs::create_dir_all(source.join("rules")).unwrap();
+        std::os::unix::fs::symlink(outside.join("rule.md"), source.join("rules/rule.md")).unwrap();
+
+        let dest = scratch.path().join("dest");
+        copy_dir_recursive(&source, &dest).unwrap();
+
+        let copied = dest.join("rules/rule.md");
+        assert_eq!(fs::read_link(&copied).unwrap(), outside.join("rule.md"));
+        assert_eq!(fs::read_to_string(&copied).unwrap(), "rule");
+    }
+
+    /// A link that climbs out of the tree and back in by name still resolves if
+    /// copied verbatim — but only against the *original*, which import then
+    /// moves into the backup dir. It has to be re-pointed at the copy.
+    #[test]
+    fn copy_repoints_links_that_leave_and_re_enter_at_the_copy() {
+        let scratch = tempdir().unwrap();
+        let source = scratch.path().join("source");
+        fs::create_dir_all(source.join("nested")).unwrap();
+        fs::write(source.join("target.md"), "target").unwrap();
+        std::os::unix::fs::symlink("../../source/target.md", source.join("nested/link.md"))
+            .unwrap();
+
+        let dest = scratch.path().join("dest");
+        copy_dir_recursive(&source, &dest).unwrap();
+        // Import moves the original aside once copied; the copy must stand alone.
+        fs::rename(&source, scratch.path().join("backup")).unwrap();
+
+        let copied = dest.join("nested/link.md");
+        assert_eq!(
+            fs::read_to_string(&copied).unwrap(),
+            "target",
+            "link must follow the copy, not the original"
+        );
+    }
+
+    #[test]
+    fn relative_path_between_walks_up_then_down() {
+        assert_eq!(
+            relative_path_between(Path::new("/a/b/nested"), Path::new("/a/b/target.md")),
+            PathBuf::from("../target.md")
+        );
+        assert_eq!(
+            relative_path_between(Path::new("/a/b"), Path::new("/a/b/c/d.md")),
+            PathBuf::from("c/d.md")
+        );
+    }
+
+    #[test]
+    fn normalize_lexically_resolves_traversal_without_touching_disk() {
+        assert_eq!(
+            normalize_lexically(Path::new("/home/u/.claude/skills/../../.agents/skills/x")),
+            PathBuf::from("/home/u/.agents/skills/x")
+        );
+        assert_eq!(
+            normalize_lexically(Path::new("./a/./b/../c")),
+            PathBuf::from("a/c")
+        );
+        // A relative path may legitimately climb above its own start.
+        assert_eq!(
+            normalize_lexically(Path::new("../../x")),
+            PathBuf::from("../../x")
+        );
+        // `/..` is `/`, so an absolute path can never climb past the root.
+        assert_eq!(normalize_lexically(Path::new("/../x")), PathBuf::from("/x"));
     }
 
     #[test]
