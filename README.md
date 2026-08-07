@@ -48,6 +48,27 @@ Already using Claude Desktop, Claude Code, or Codex? On first launch the app off
 
 Deleting a profile from its detail view removes the launcher and CLI wrapper; the profile's data either goes to the Trash or is deleted outright, your choice.
 
+### What profiles share
+
+Profiles separate your **account**, not your working setup. Skills, subagents, slash commands and your global instructions are inert content describing how you work, so a new profile inherits them from your main install (`~/.claude` or `~/.codex`) instead of starting empty:
+
+| Inherited from your main install | Kept separate per profile |
+|----------------------------------|---------------------------|
+| `skills/`, `agents/`, `commands/`, `rules/`, `workflows/`, `output-styles/` | account and credentials (Keychain entry / `auth.json`) |
+| `CLAUDE.md` for Claude, `AGENTS.md` for Codex — your global instructions | `settings.json`, including `hooks` and `permissions` |
+| | `plugins/`, MCP servers, session and project history |
+
+Anything executable or credentialed stays isolated: a hook you add for one account can't fire inside another, and a permissive tool allowlist can't leak into a work profile.
+
+The inherited entries are symlinks, written into the profile's config dir when its CLI wrapper is generated. They are only ever created over an empty path, so a profile can opt out — give it a real directory and it keeps its own copy from then on:
+
+```sh
+cd ~/Library/Application\ Support/ai-profiles/profiles/<id>/cli-config
+rm skills && mkdir skills
+```
+
+Profiles created by migrating an existing install already hold their own copy of everything, so they inherit nothing.
+
 ### Usage stats
 
 Each profile's detail page shows that profile's current quota utilization alongside the launcher and CLI buttons. A small countdown tells you when the next auto-refresh will fire (every 5 minutes while the card is visible), or you can hit the ↻ button to refresh on demand.
@@ -69,7 +90,7 @@ Each profile's detail page shows that profile's current quota utilization alongs
 
 Three steps, in order:
 
-1. **Copies** your existing data into the new profile dir under `~/Library/Application Support/ai-profiles/profiles/<id>/`.
+1. **Copies** your existing data into the new profile dir under `~/Library/Application Support/ai-profiles/profiles/<id>/`. Symlinks stay symlinks, with relative targets re-pointed so they still resolve once the originals move in step 2 — skill managers routinely install links that reach outside `~/.claude`.
 2. **Moves** the originals (`~/.claude` and/or `~/Library/Application Support/Claude` for Claude; `~/.codex` and/or `~/Library/Application Support/Codex` for Codex) into a timestamped backup dir under `~/Library/Application Support/ai-profiles/migration-backup-<timestamp>/`.
 3. **Generates** the per-profile launcher (`Claude (<Name>).app` or `Codex (<Name>).app`) and CLI wrapper (`claude-<slug>` or `codex-<slug>` in `~/.local/bin`).
 
@@ -121,6 +142,12 @@ The launcher `.app` immediately execs the real Claude.app, so the running Dock i
 
 **My new profile launcher doesn't open as `claude-<slug>` from my terminal.**
 `~/.local/bin` isn't on your PATH. Open Settings → System and click "Install / re-install hook", or add the line manually to your `.zshrc` / `.bashrc` / `config.fish`. Open a new terminal to pick up the change.
+
+**I installed a new skill and my profile's CLI doesn't see it.**
+Profiles link to the skills in your main install, so anything you install there shows up in every profile with no extra step. If a profile sees *no* inherited skills at all, its links haven't been written yet — they're created whenever the profile's CLI wrapper is generated, so editing the profile (changing its colour, say) will produce them. Profiles that migrated an existing install keep their own copy and inherit nothing by design.
+
+**I put an `AGENTS.md` in my Claude config dir and nothing happened.**
+Claude Code reads `AGENTS.md` at project scope only; its user-scope instructions file is `CLAUDE.md`. Codex is the other way round and reads `~/.codex/AGENTS.md`. That's why the table above names a different file per app.
 
 **Does this send any of my data anywhere?**
 No. The app is local-only and has no analytics, no telemetry, no remote logging. Auto-update checks the GitHub Releases manifest and that's the only outbound request.

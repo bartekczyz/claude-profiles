@@ -60,6 +60,26 @@ pub struct AppSpec {
     ///
     /// [`cli_config_env`]: AppSpec::cli_config_env
     pub gui_auth_via_config_env: bool,
+    /// Config-dir entries a profile *inherits* from the stock install
+    /// (`~/.claude`, `~/.codex`) instead of isolating, by way of a symlink
+    /// created in the profile's `cli-config` dir.
+    ///
+    /// The isolation boundary is identity, not craft: profiles exist to
+    /// separate account, auth, quota and history. These entries are inert
+    /// content describing *how* the user works — skills, subagents, slash
+    /// commands, rules, global instructions — so duplicating them per profile
+    /// is upkeep with no security benefit, and the GUI already shares them
+    /// (its launcher never exports [`cli_config_env`], so the desktop app's
+    /// agent reads the stock dir).
+    ///
+    /// Deliberately excluded: `settings.json` (carries `hooks`, which run
+    /// arbitrary shell, and `permissions` allowlists), `hooks/`, `plugins/`
+    /// (absolute install paths, project-scoped entries, and mutable state that
+    /// concurrently-running profiles would race on) and anything holding
+    /// credentials or session history.
+    ///
+    /// [`cli_config_env`]: AppSpec::cli_config_env
+    pub shared_surfaces: &'static [&'static str],
 }
 
 pub const CLAUDE: AppSpec = AppSpec {
@@ -75,6 +95,15 @@ pub const CLAUDE: AppSpec = AppSpec {
     cli_stock_config_dir_name: ".claude",
     has_usage: true,
     gui_auth_via_config_env: false,
+    shared_surfaces: &[
+        "CLAUDE.md",
+        "agents",
+        "commands",
+        "output-styles",
+        "rules",
+        "skills",
+        "workflows",
+    ],
 };
 
 pub const CODEX: AppSpec = AppSpec {
@@ -90,6 +119,7 @@ pub const CODEX: AppSpec = AppSpec {
     cli_stock_config_dir_name: ".codex",
     has_usage: true,
     gui_auth_via_config_env: true,
+    shared_surfaces: &["AGENTS.md", "rules", "skills"],
 };
 
 /// Borrow the static [`AppSpec`] for a kind.

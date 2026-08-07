@@ -12,6 +12,7 @@ mod migration;
 mod path_setup;
 mod paths;
 mod profiles;
+mod shared_config;
 mod slug;
 #[cfg(test)]
 mod test_support;
