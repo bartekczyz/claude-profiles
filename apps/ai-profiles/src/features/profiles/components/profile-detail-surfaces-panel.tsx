@@ -1,0 +1,248 @@
+import type { ReactNode } from 'react'
+
+import { useEffect, useRef, useState } from 'react'
+
+import { Monitor, Terminal } from 'lucide-react'
+
+import { ariaKeyshortcutsFor, cn, Kbd, Skeleton, useShortcut } from '@/design'
+
+type Props = {
+  /**
+   * The exact shell command the terminal row copies — the `claude-<slug>`
+   * wrapper for a managed profile, the bare binary for a stock install.
+   */
+  command: string
+  guiEnabled: boolean
+  cliEnabled: boolean
+  /**
+   * Whether this pane's ⏎ and ⌘C bindings are live. The panel cannot see
+   * the dialogs, palette, and settings pane that cover it, so the app shell
+   * decides; the flag is passed through rather than defaulted because an
+   * omitted `enabled` reads as `undefined` and silently kills the binding.
+   */
+  shortcutsEnabled: boolean
+  /**
+   * One short line about the desktop surface's own state, replacing the
+   * card explainers. Undefined renders a skeleton bar — the per-profile
+   * paths that describe the surface are still resolving.
+   */
+  guiDescription?: string
+  cliDescription?: string
+  onLaunchGui: () => Promise<unknown>
+  onCopyCli: () => Promise<unknown>
+  onError: (message: string | null) => void
+}
+
+/** How long the token stays swapped to its confirmation after a copy. */
+const copiedResetMs = 1200
+
+const offDescription = 'Off — turn on in Edit'
+const bothOffDescription = 'Both surfaces off — turn one on in Edit'
+
+const rowClasses =
+  'flex min-h-[42px] items-center justify-between gap-3.5 border-t border-border-soft px-[13px] py-[9px] first:border-t-0'
+
+const controlClasses =
+  'inline-flex h-7 shrink-0 cursor-pointer items-center rounded-[7px] leading-none outline-none transition-[background-color,border-color,color,filter,transform] duration-(--duration-snap) ease-(--ease-natural) focus-visible:ring-2 focus-visible:ring-orange/40'
+
+/**
+ * Filled orange treatment. Worn by the Open button, and by the command
+ * token when the terminal is the only surface a profile has — so every
+ * reachable state of the pane keeps exactly one obvious action.
+ */
+const filledClasses =
+  'border-0 bg-[linear-gradient(180deg,var(--color-orange),var(--color-orange-deep))] text-white shadow-[0_1px_2px_rgba(191,98,64,0.35),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-[0.96] active:translate-y-px'
+
+const outlinedClasses =
+  'border border-border bg-white/60 text-ink-soft hover:border-border-strong hover:bg-white dark:bg-white/[0.05] dark:hover:bg-white/[0.09]'
+
+/**
+ * The surfaces block: one inset grouped panel holding a Desktop app row and
+ * a Terminal row, in the manner of macOS System Settings. Each row carries a
+ * glyph, a title, a line describing that surface's own state, and its own
+ * trailing control.
+ *
+ * Because every row states its own status, the merged status line below the
+ * panel would only repeat them — it renders only when both surfaces are off,
+ * which is the one state no row can explain on its own.
+ *
+ * A disabled surface greys its own row's control to an em dash and says so
+ * in its own description. The container is never dimmed: one switched-off
+ * surface must not degrade the legibility of the other.
+ *
+ * Launch and copy arrive as callbacks so the same panel serves managed
+ * profiles (which stamp last-used) and the stock-install entry (which shells
+ * out directly).
+ */
+export function ProfileDetailSurfacesPanel({
+  command,
+  guiEnabled,
+  cliEnabled,
+  shortcutsEnabled,
+  guiDescription,
+  cliDescription,
+  onLaunchGui,
+  onCopyCli,
+  onError,
+}: Props) {
+  const [copied, setCopied] = useState(false)
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (resetTimer.current !== null) {
+        clearTimeout(resetTimer.current)
+      }
+    }
+  }, [])
+
+  async function safeRun(action: () => Promise<unknown>): Promise<boolean> {
+    try {
+      await action()
+      onError(null)
+      return true
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : String(caught))
+      return false
+    }
+  }
+
+  async function launch(): Promise<void> {
+    await safeRun(onLaunchGui)
+  }
+
+  async function copy(): Promise<void> {
+    const succeeded = await safeRun(onCopyCli)
+    if (!succeeded) {
+      return
+    }
+    setCopied(true)
+    if (resetTimer.current !== null) {
+      clearTimeout(resetTimer.current)
+    }
+    resetTimer.current = setTimeout(() => setCopied(false), copiedResetMs)
+  }
+
+  // Registered here rather than in the app shell so the keyboard route runs
+  // the button's handler verbatim — same last-used stamp, same error
+  // surfacing, same copy confirmation on the token.
+  useShortcut(
+    'open-selected-desktop',
+    () => {
+      void launch()
+    },
+    { enabled: shortcutsEnabled && guiEnabled },
+  )
+  useShortcut(
+    'copy-selected-cli',
+    () => {
+      void copy()
+    },
+    { enabled: shortcutsEnabled && cliEnabled },
+  )
+
+  // With no Open button on screen, the token is the only action left, so it
+  // takes the primary fill. Checked against the outlined alternative: mono
+  // white-on-orange still reads as a shell command, and the alternative
+  // leaves a pane with nothing coloured to aim at.
+  const tokenPromoted = cliEnabled && !guiEnabled
+
+  return (
+    <>
+      <div className="overflow-hidden rounded-[10px] border border-border bg-white/50 dark:bg-white/[0.035]">
+        <SurfaceRow
+          glyph={<Monitor aria-hidden className="h-3.5 w-3.5" strokeWidth={1.85} />}
+          title="Desktop app"
+          description={guiEnabled ? guiDescription : offDescription}
+          control={
+            guiEnabled ? (
+              <button
+                type="button"
+                aria-keyshortcuts={ariaKeyshortcutsFor('open-selected-desktop')}
+                className={cn(controlClasses, filledClasses, 'gap-[7px] px-[11px] text-[12px] font-medium')}
+                onClick={() => {
+                  void launch()
+                }}
+              >
+                Open
+                <Kbd variant="onOrange" shortcutId="open-selected-desktop" />
+              </button>
+            ) : null
+          }
+        />
+        <SurfaceRow
+          glyph={<Terminal aria-hidden className="h-3.5 w-3.5" strokeWidth={1.85} />}
+          title="Terminal"
+          description={cliEnabled ? cliDescription : offDescription}
+          control={
+            cliEnabled ? (
+              <button
+                type="button"
+                data-copied={copied ? 'true' : 'false'}
+                aria-keyshortcuts={ariaKeyshortcutsFor('copy-selected-cli')}
+                className={cn(
+                  controlClasses,
+                  tokenPromoted ? filledClasses : outlinedClasses,
+                  'gap-2 px-[9px] font-mono text-[11.5px]',
+                  !tokenPromoted &&
+                    'data-[copied=true]:border-green data-[copied=true]:bg-green/[0.06] data-[copied=true]:text-green',
+                )}
+                onClick={() => {
+                  void copy()
+                }}
+              >
+                {copied ? 'Copied' : command}
+                <Kbd variant={tokenPromoted ? 'onOrange' : 'default'} shortcutId="copy-selected-cli" />
+              </button>
+            ) : null
+          }
+        />
+      </div>
+
+      {!guiEnabled && !cliEnabled ? (
+        <p role="status" className="mt-3.5 flex items-center gap-[7px] text-meta text-muted">
+          <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-strong" />
+          {bothOffDescription}
+        </p>
+      ) : null}
+    </>
+  )
+}
+
+type SurfaceRowProps = {
+  glyph: ReactNode
+  title: string
+  control: ReactNode
+  /**
+   * Undefined while the paths behind the description are still resolving.
+   */
+  description?: string
+}
+
+function SurfaceRow({ glyph, title, control, description }: SurfaceRowProps) {
+  return (
+    <div className={rowClasses}>
+      <span className="flex min-w-0 items-center gap-[9px]">
+        <span
+          aria-hidden
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] bg-cream-3 text-muted dark:bg-white/[0.06]"
+        >
+          {glyph}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[12.5px] tracking-[-0.005em] text-ink">{title}</span>
+          {description === undefined ? (
+            <Skeleton shape="text" className="mt-1 h-2.5 w-44" />
+          ) : (
+            <span className="block text-[11px] text-muted-strong">{description}</span>
+          )}
+        </span>
+      </span>
+      {control ?? (
+        <span aria-hidden className="text-[11px] text-muted-strong">
+          —
+        </span>
+      )}
+    </div>
+  )
+}
