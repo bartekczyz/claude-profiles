@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 
-use crate::activity::{self, Activity, ActivityKind};
 use crate::app_kind::{spec, AppKind};
 use crate::app_state::{self, AppState, AppStatePatch};
 use crate::deps::{self, Dependencies};
@@ -12,8 +11,8 @@ use crate::migration::{
 };
 use crate::path_setup::{self, PathHookOutcome, Shell};
 use crate::paths::{
-    activity_log_path, gui_launcher_path, next_migration_backup_dir,
-    profile_dir as profile_data_dir, stock_cli_config_dir, stock_gui_support_dir,
+    gui_launcher_path, next_migration_backup_dir, profile_dir as profile_data_dir,
+    stock_cli_config_dir, stock_gui_support_dir,
 };
 use crate::profiles::{self, Profile, ProfilePatch, ProfilePaths, Surface, Surfaces};
 use crate::usage::{
@@ -22,16 +21,6 @@ use crate::usage::{
     quota::{ClaudeQuotaCache, ClaudeQuotaProvider},
     ProfileUsage,
 };
-
-/// Append an activity entry to the profile's log. Failures are logged
-/// but do not propagate — the log is best-effort, not load-bearing.
-fn record_silent(profile_id: &str, kind: ActivityKind, metadata: Option<serde_json::Value>) {
-    let path = match activity_log_path(profile_id) {
-        Ok(path) => path,
-        Err(_) => return,
-    };
-    let _ = activity::append(&path, &Activity::now(kind, metadata));
-}
 
 #[tauri::command]
 pub fn list_profiles() -> AppResult<Vec<Profile>> {
@@ -45,9 +34,7 @@ pub fn create_profile(
     color: String,
     surfaces: Surfaces,
 ) -> AppResult<Profile> {
-    let profile = profiles::create(app, &name, &color, surfaces)?;
-    record_silent(&profile.id, ActivityKind::Created, None);
-    Ok(profile)
+    profiles::create(app, &name, &color, surfaces)
 }
 
 #[tauri::command]
@@ -68,28 +55,7 @@ pub fn regenerate_launchers(id: String) -> AppResult<()> {
 
 #[tauri::command]
 pub fn update_profile(id: String, patch: ProfilePatch) -> AppResult<Profile> {
-    // Capture the prior state so we can attribute the activity precisely
-    // (renamed vs. color_changed) and emit one entry per change.
-    let before = profiles::load()?
-        .into_iter()
-        .find(|profile| profile.id == id)
-        .ok_or_else(|| AppError::NotFound(format!("profile {id} not found")))?;
-    let updated = profiles::update(&id, patch)?;
-    if updated.name != before.name {
-        record_silent(
-            &updated.id,
-            ActivityKind::Renamed,
-            Some(serde_json::json!({ "from": before.name, "to": updated.name })),
-        );
-    }
-    if updated.color.to_lowercase() != before.color.to_lowercase() {
-        record_silent(
-            &updated.id,
-            ActivityKind::ColorChanged,
-            Some(serde_json::json!({ "from": before.color, "to": updated.color })),
-        );
-    }
-    Ok(updated)
+    profiles::update(&id, patch)
 }
 
 #[tauri::command]
@@ -104,16 +70,7 @@ pub fn reorder_profiles(ids: Vec<String>) -> AppResult<Vec<Profile>> {
 
 #[tauri::command]
 pub fn toggle_surface(id: String, surface: Surface, enabled: bool) -> AppResult<Profile> {
-    let profile = profiles::toggle_surface(&id, surface, enabled)?;
-    record_silent(
-        &profile.id,
-        ActivityKind::SurfaceToggled,
-        Some(serde_json::json!({
-            "surface": match surface { Surface::Gui => "gui", Surface::Cli => "cli" },
-            "enabled": enabled,
-        })),
-    );
-    Ok(profile)
+    profiles::toggle_surface(&id, surface, enabled)
 }
 
 #[tauri::command]
@@ -146,7 +103,18 @@ pub fn open_profile_in_app(id: String) -> AppResult<Profile> {
         }
         Ok(())
     })?;
-    record_silent(&id, ActivityKind::LaunchedGui, None);
+    profiles::touch_last_used(&id)
+}
+
+/// Stamp `last_used_at` on a profile without launching anything.
+///
+/// The copy-the-CLI-command action is a "use" of the profile just as much
+/// as a desktop launch is, but it happens entirely in the frontend
+/// (clipboard write), so it needs an explicit way to record itself. Returns
+/// the updated profile so React can patch its cached list in place rather
+/// than refetching.
+#[tauri::command]
+pub fn touch_profile_last_used(id: String) -> AppResult<Profile> {
     profiles::touch_last_used(&id)
 }
 
@@ -271,33 +239,6 @@ fn terminal_applescript(command: &str) -> String {
 }
 
 #[tauri::command]
-pub fn list_activity(profile_id: String, limit: usize) -> AppResult<Vec<Activity>> {
-    let path = activity_log_path(&profile_id)?;
-    activity::read_last_n(&path, limit)
-}
-
-#[tauri::command]
-pub fn record_activity(
-    profile_id: String,
-    kind: ActivityKind,
-    metadata: Option<serde_json::Value>,
-) -> AppResult<Profile> {
-    record_silent(&profile_id, kind, metadata);
-    // Usage kinds (gui launch, cli copy) also stamp last_used_at; other
-    // kinds return the current profile state unchanged. React invalidates
-    // the profiles cache on the returned value either way.
-    match kind {
-        ActivityKind::LaunchedGui | ActivityKind::CopiedCli => {
-            profiles::touch_last_used(&profile_id)
-        }
-        _ => profiles::load()?
-            .into_iter()
-            .find(|profile| profile.id == profile_id)
-            .ok_or_else(|| AppError::NotFound(format!("profile {profile_id} not found"))),
-    }
-}
-
-#[tauri::command]
 pub fn detect_existing_install(app: AppKind) -> AppResult<ExistingInstall> {
     migration::detect_for(app)
 }
@@ -397,11 +338,6 @@ pub fn import_existing_install(app: AppKind, input: ImportExistingInput) -> AppR
         return Err(err);
     }
 
-    record_silent(
-        &outcome.profile.id,
-        ActivityKind::Imported,
-        Some(serde_json::json!({ "backupDir": outcome.backup_dir })),
-    );
     Ok(outcome.profile)
 }
 

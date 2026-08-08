@@ -106,10 +106,6 @@ pub fn refresh_cwd_dir() -> AppResult<PathBuf> {
     Ok(app_data_dir()?.join("refresh-cwd"))
 }
 
-pub fn activity_log_path(id: &str) -> AppResult<PathBuf> {
-    Ok(profile_dir(id)?.join("activity.jsonl"))
-}
-
 pub fn stock_gui_support_dir(spec: &AppSpec) -> AppResult<PathBuf> {
     let home = dirs::home_dir()
         .ok_or_else(|| AppError::NotFound("could not determine user home directory".to_string()))?;

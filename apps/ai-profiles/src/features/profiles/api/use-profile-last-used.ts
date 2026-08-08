@@ -2,7 +2,7 @@ import type { Profile } from '@/lib/types'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { copyToClipboard, openProfileInApp, recordActivity } from '@/lib/commands'
+import { copyToClipboard, openProfileInApp, touchProfileLastUsed } from '@/lib/commands'
 import { queryKeys } from '@/lib/query/keys'
 
 function setEntry(list: Array<Profile> | undefined, updated: Profile): Array<Profile> {
@@ -14,9 +14,9 @@ function setEntry(list: Array<Profile> | undefined, updated: Profile): Array<Pro
 
 /**
  * Last-used events — launching the desktop app or copying the CLI command.
- * Each updates lastUsedAt server-side and appends an activity entry, so
- * after the mutation we refresh both the profile list and that profile's
- * activity timeline.
+ * Each stamps lastUsedAt server-side and hands back the updated profile,
+ * which we patch straight into the cached list so the header's
+ * "Last used …" line refreshes without a refetch.
  *
  * The hook returns plain async callbacks so the surface card can keep
  * its `onPrimary: () => void` interface; errors propagate to the caller.
@@ -31,18 +31,16 @@ export function useProfileLastUsed(): {
     mutationFn: openProfileInApp,
     onSuccess: (updated) => {
       queryClient.setQueryData<Array<Profile>>(queryKeys.profiles.all, (previous) => setEntry(previous, updated))
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.activity(updated.id) })
     },
   })
 
   const copyMutation = useMutation({
     mutationFn: async (input: { profileId: string; command: string }) => {
       await copyToClipboard(input.command)
-      return recordActivity({ profileId: input.profileId, kind: 'copied_cli' })
+      return touchProfileLastUsed(input.profileId)
     },
     onSuccess: (updated) => {
       queryClient.setQueryData<Array<Profile>>(queryKeys.profiles.all, (previous) => setEntry(previous, updated))
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.activity(updated.id) })
     },
   })
 
