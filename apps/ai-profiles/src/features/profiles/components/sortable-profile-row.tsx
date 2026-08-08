@@ -5,33 +5,35 @@ import { type AnimateLayoutChanges, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 
-import { cn, Kbd } from '@/design'
-
-import { SidebarSurfaceIcons } from './sidebar-surface-icons'
+import { SidebarProfileRow } from './sidebar-profile-row'
 
 type Props = {
   name: string
   swatch: ReactNode
   surfaces: Surfaces
   selected: boolean
-  shortcutIndex?: number
   sortableId: string
+  glyph?: ReactNode
+  shortcutIndex?: number
   onSelect: () => void
 }
 
 /**
  * Sortable wrapper around the sidebar row.
  *
- * Replaces SidebarProfileRow inside the DndContext: the row itself is
- * still a button that selects the profile on click, but it also exposes
- * a grip handle (Lucide `grip-vertical`) on the left edge that owns the
- * drag listeners. The button stays a click target — dnd-kit's pointer
- * sensor uses an activation-distance threshold so a normal click never
- * accidentally starts a drag.
+ * Renders the plain `SidebarProfileRow` unchanged — so the two variants stay
+ * pixel-identical — and adds a grip handle (Lucide `grip-vertical`) that owns
+ * the drag listeners. The grip sits in the row's leading column, on top of the
+ * app glyph, which fades out while the grip is showing; a dedicated gutter
+ * would cost the width the profile names need at 200px.
  *
- * Keyboard reorder lands via dnd-kit's KeyboardSensor (Space to grab,
- * arrows to move, Space/Enter to drop, Esc to cancel) — the grip button
- * is the focus target.
+ * The row itself stays a click target — dnd-kit's pointer sensor uses an
+ * activation-distance threshold so a normal click never accidentally starts a
+ * drag.
+ *
+ * Keyboard reorder lands via dnd-kit's KeyboardSensor (Space to grab, arrows
+ * to move, Space/Enter to drop, Esc to cancel) — the grip button is the focus
+ * target, and focusing anywhere in the row reveals it.
  */
 // Animate the *during-drag* shuffle (siblings sliding to make room) but
 // skip the *post-drop* layout-change animation. Our optimistic cache
@@ -42,7 +44,16 @@ type Props = {
 // drop avoids that artifact; the drag transform itself smooths the move.
 const animateLayoutChanges: AnimateLayoutChanges = (args) => args.isSorting
 
-export function SortableProfileRow({ name, swatch, surfaces, selected, shortcutIndex, sortableId, onSelect }: Props) {
+export function SortableProfileRow({
+  name,
+  swatch,
+  surfaces,
+  selected,
+  sortableId,
+  glyph,
+  shortcutIndex,
+  onSelect,
+}: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: sortableId,
     animateLayoutChanges,
@@ -53,8 +64,6 @@ export function SortableProfileRow({ name, swatch, surfaces, selected, shortcutI
     transition,
   }
 
-  const hasShortcut = shortcutIndex !== undefined && shortcutIndex < 9
-
   return (
     <div
       ref={setNodeRef}
@@ -62,32 +71,25 @@ export function SortableProfileRow({ name, swatch, surfaces, selected, shortcutI
       data-dragging={isDragging ? 'true' : 'false'}
       className="group/sortable relative data-[dragging=true]:z-10 data-[dragging=true]:scale-[1.02] data-[dragging=true]:shadow-card-hover"
     >
-      <button
-        type="button"
-        data-active={selected ? 'true' : 'false'}
-        onClick={onSelect}
-        aria-keyshortcuts={hasShortcut ? `Meta+${shortcutIndex + 1}` : undefined}
-        // See sibling `sidebar-profile-row` for the `transform-gpu` rationale:
-        // pins the row on its own GPU layer so contained icons don't
-        // sub-pixel jitter during the hover/active background transition.
-        className="group/row grid w-full transform-gpu grid-cols-[14px_1fr_auto_auto] items-center gap-2.5 rounded-md py-[7px] pr-2.5 pl-[22px] text-left cursor-pointer transition-colors duration-(--duration-snap) ease-(--ease-natural) hover:bg-white/45 dark:hover:bg-white/[0.04] data-[active=true]:bg-white/72 data-[active=true]:shadow-[0_1px_2px_rgba(40,30,20,0.04),inset_0_0_0_1px_rgba(229,224,210,0.55)] dark:data-[active=true]:bg-white/[0.08] dark:data-[active=true]:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-      >
-        {swatch}
-        <span className="truncate text-[13px] font-medium tracking-[-0.005em] text-ink">{name}</span>
-        <SidebarSurfaceIcons surfaces={surfaces} />
-        {hasShortcut ? (
-          // See sibling `sidebar-profile-row` for the wrapper-flex rationale.
-          <span className="inline-flex items-center transition-opacity opacity-40 group-hover/row:opacity-100 group-data-[active=true]/row:opacity-100">
-            <Kbd>⌘{shortcutIndex + 1}</Kbd>
-          </span>
-        ) : (
-          <span />
-        )}
-      </button>
-      {/* Grip — absolute on the row's left edge inside the padded gutter.
-          Owns the drag listeners so dragging it doesn't fire the button
-          click. Visible at low opacity by default so users discover it,
-          full opacity on hover/focus. */}
+      <SidebarProfileRow
+        name={name}
+        swatch={swatch}
+        surfaces={surfaces}
+        selected={selected}
+        glyph={glyph}
+        shortcutIndex={shortcutIndex}
+        onSelect={onSelect}
+      />
+      {/* Grip — absolutely placed over the row's leading column. Owns the drag
+          listeners so dragging it doesn't fire the button click.
+
+          Hidden at rest, unlike the pre-redesign grip which sat at low opacity
+          so it could be discovered without hovering. It has to be: this cell
+          now holds the row's app glyph, which fades out exactly as the grip
+          fades in, and showing both at rest would stack them. The alternative
+          — a dedicated gutter for the grip — costs width the profile names
+          need at 200px. Discoverability is traded for the glyph deliberately;
+          keyboard reorder is unaffected, since focus reveals the grip. */}
       <button
         type="button"
         {...attributes}
@@ -96,12 +98,7 @@ export function SortableProfileRow({ name, swatch, surfaces, selected, shortcutI
         // per-row label ("Reorder Personal") wins over the generic
         // role/aria-roledescription dnd-kit attaches to every sortable.
         aria-label={`Reorder ${name}`}
-        className={cn(
-          'absolute top-1/2 left-1 grid h-6 w-4 -translate-y-1/2 cursor-grab place-items-center text-muted-strong outline-none',
-          'opacity-45 transition-opacity duration-(--duration-snap) ease-(--ease-natural)',
-          'group-hover/sortable:opacity-100 focus-visible:opacity-100',
-          'active:cursor-grabbing',
-        )}
+        className="absolute top-1/2 left-1.5 grid h-6 w-4 -translate-y-1/2 cursor-grab place-items-center text-muted-strong outline-none opacity-0 transition-opacity duration-(--duration-snap) ease-(--ease-natural) group-hover/sortable:opacity-100 group-focus-within/sortable:opacity-100 active:cursor-grabbing"
       >
         <GripVertical className="h-3.5 w-3.5" strokeWidth={1.75} />
       </button>

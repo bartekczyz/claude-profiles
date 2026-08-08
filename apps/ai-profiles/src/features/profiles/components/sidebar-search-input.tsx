@@ -19,10 +19,12 @@ type Props = {
  */
 export function SidebarSearchInput({ value = '', placeholder = 'Search profilesâ€¦', inputRef, onChange }: Props) {
   return (
-    <div className="relative mb-3.5 px-1">
+    // Tightened for the 200px column: the field gives back the padding and
+    // row height it can spare so the profile names keep theirs.
+    <div className="relative mb-2.5 px-0.5">
       <Search
         aria-hidden
-        className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-strong"
+        className="pointer-events-none absolute top-1/2 left-2.5 h-3 w-3 -translate-y-1/2 text-muted-strong"
         strokeWidth={2}
       />
       <input
@@ -37,9 +39,9 @@ export function SidebarSearchInput({ value = '', placeholder = 'Search profilesâ
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        className="w-full appearance-none rounded-md border border-border bg-white/55 py-[6px] pr-9 pl-7 text-[12.5px] text-ink placeholder:text-muted-strong outline-none transition-colors duration-(--duration-snap) ease-(--ease-natural) focus:border-orange/55 focus:bg-white focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-orange)_12%,transparent)] dark:bg-white/4 dark:focus:bg-white/6"
+        className="w-full appearance-none rounded-md border border-border bg-white/55 py-[5px] pr-8 pl-6.5 text-[12px] text-ink placeholder:text-muted-strong outline-none transition-colors duration-(--duration-snap) ease-(--ease-natural) focus:border-orange/55 focus:bg-white focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-orange)_12%,transparent)] dark:bg-white/4 dark:focus:bg-white/6"
       />
-      <span className="pointer-events-none absolute right-2.5 top-0.75 ">
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
         <Kbd variant="subtle" shortcutId="focus-search" />
       </span>
     </div>
