@@ -277,7 +277,12 @@ function AppContent() {
 
   // Detail-scope shortcuts — gated on a managed profile being selected, the
   // detail pane being on top, and no overlay (dialog/palette/migration)
-  // covering it. Default rows don't support edit/delete/launch/copy.
+  // covering it. Default rows don't support edit/delete.
+  //
+  // ⏎ and ⌘C are registered by the detail pane's surfaces panel instead, so
+  // the keyboard route runs the buttons' handlers verbatim (same error
+  // surfacing, same copy confirmation). `detailEnabled` is handed down as
+  // `shortcutsEnabled` so they stay gated the same way these are.
   useShortcut(
     'edit-selected',
     () => {
@@ -292,27 +297,6 @@ function AppContent() {
     () => {
       if (managedSelected) {
         setDialog({ kind: 'delete' })
-      }
-    },
-    { enabled: detailEnabled && managedSelected !== null },
-  )
-  useShortcut(
-    'open-selected-desktop',
-    () => {
-      if (managedSelected?.surfaces.gui) {
-        void lastUsed.launchDesktop(managedSelected.id)
-      }
-    },
-    { enabled: detailEnabled && managedSelected !== null },
-  )
-  useShortcut(
-    'copy-selected-cli',
-    () => {
-      if (managedSelected?.surfaces.cli) {
-        void lastUsed.copyCli({
-          profileId: managedSelected.id,
-          command: wrapperCommand(managedSelected.app, managedSelected.slug),
-        })
       }
     },
     { enabled: detailEnabled && managedSelected !== null },
@@ -435,18 +419,16 @@ function AppContent() {
           {/* Activity keeps the off-screen pane mounted so toggling gear ↔ profile
               never re-fetches dependencies/backups or re-runs profile-detail effects.
               ProfileDetail manages its own Suspense for the per-profile paths fetch
-              — the header, danger link, and hint strip render with sidebar-provided
-              data immediately. */}
+              — the header identity block renders with sidebar-provided data
+              immediately. */}
           <Activity mode={rightPane.kind === 'profile' && selected !== null ? 'visible' : 'hidden'}>
             {selected?.kind === 'managed' ? (
               <QueryErrorBoundary>
                 <ProfileDetail
                   profile={selected.profile}
+                  shortcutsEnabled={detailEnabled}
                   onEdit={() => setDialog({ kind: 'edit' })}
                   onDelete={() => setDialog({ kind: 'delete' })}
-                  onToggle={async (surface, enabled) => {
-                    await profiles.toggle({ id: selected.profile.id, surface, enabled })
-                  }}
                 />
               </QueryErrorBoundary>
             ) : selected?.kind === 'default' ? (
