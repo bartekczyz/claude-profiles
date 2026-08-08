@@ -7,11 +7,29 @@ import { Component, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { RefreshCw } from 'lucide-react'
 
-import { TooltipBubble } from '@/design'
+import { Skeleton, TooltipBubble } from '@/design'
 import { appSpecs } from '@/lib/app-registry'
 import { openCliLogin } from '@/lib/commands'
 
 import { refetchIntervalMs, UsageUnavailableError, useProfileUsage } from '../api/use-profile-usage'
+
+/**
+ * The usage block's container: the same inset grouped panel as the surfaces
+ * panel below it — same radius, same 13px gutter — so the pane has one
+ * container treatment rather than a card here and a panel there.
+ *
+ * Deliberately a weight lighter than the surfaces panel (soft hairline,
+ * thinner wash, no internal row dividers). Usage is the one block whose
+ * height moves between quota states — two meters, three, a skeleton, an
+ * error line, a recovery button — and a lighter container makes that
+ * movement far less disruptive than locking the height would be.
+ *
+ * The bottom margin matches the gap the prototype puts between panels; the
+ * card owns it because it renders nothing at all for a profile without a
+ * CLI surface, and a caller-supplied gap would then hang in empty space.
+ */
+const usagePanelClasses =
+  'mb-3.5 rounded-[10px] border border-border-soft bg-white/30 px-[13px] py-[9px] dark:bg-white/[0.02]'
 
 type Props = {
   app: AppId
@@ -44,17 +62,17 @@ function UsageCardInner({ app, profileId, cliCommand }: { app: AppId; profileId:
   const errorCode = usageErrorCode(error)
 
   return (
-    <section className="mb-6 rounded-md border border-border p-4">
-      <header className="mb-3 flex items-center justify-between">
-        <div className="font-mono text-eyebrow font-medium uppercase tracking-[0.1em] text-muted-strong">Usage</div>
-        <div className="flex items-center gap-2">
+    <section className={usagePanelClasses}>
+      <header className="mb-1.5 flex min-h-[22px] items-center justify-between gap-3.5">
+        <span className="font-mono text-eyebrow font-medium uppercase tracking-[0.1em] text-muted-strong">Usage</span>
+        <div className="flex items-center gap-[7px]">
           <RefreshCountdown isFetching={isFetching} dataUpdatedAt={dataUpdatedAt} />
           <button
             type="button"
             aria-label="Refresh usage"
             disabled={isFetching}
             onClick={() => refetch()}
-            className="cursor-pointer text-muted-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="grid h-[22px] w-[22px] cursor-pointer place-items-center rounded-full text-muted-strong transition-colors duration-(--duration-snap) ease-(--ease-natural) hover:not-disabled:bg-ink/[0.06] hover:not-disabled:text-ink disabled:cursor-default disabled:opacity-50"
           >
             <RefreshCw size={14} className={isFetching ? 'animate-spin' : undefined} />
           </button>
@@ -197,7 +215,7 @@ function ReloginButton({ profileId }: { profileId: string }) {
       onClick={() => {
         void openCliLogin(profileId)
       }}
-      className="cursor-pointer self-start font-mono text-mono text-muted-strong underline hover:text-fg"
+      className="cursor-pointer self-start font-mono text-mono text-muted-strong underline hover:text-ink"
     >
       Refresh sign-in
     </button>
@@ -296,7 +314,12 @@ function Meters({ app, quota }: { app: AppId; quota: ProfileUsage['quota'] }) {
 // and reserves space for the longest "100% · resets in 23h 59m"
 // string (~22 mono chars ≈ 180px). The label column shrinks at narrow
 // viewports so the bar still has room to breathe.
-const meterGridClass = 'grid grid-cols-[32px_1fr_180px] items-center gap-2 lg:grid-cols-[140px_1fr_180px] lg:gap-3'
+//
+// The minimum height is what the mono label occupies naturally; stating it
+// lets the loading placeholder hit the same row height without having to
+// carry text of its own, so the meters don't nudge downward on arrival.
+const meterGridClass =
+  'grid min-h-[15px] grid-cols-[32px_1fr_180px] items-center gap-2 lg:grid-cols-[140px_1fr_180px] lg:gap-3'
 
 function Meter({
   label,
@@ -334,9 +357,9 @@ function Meter({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={label}
-          className="relative h-2 overflow-hidden rounded bg-cream-2"
+          className="relative h-1.5 overflow-hidden rounded-full bg-cream-3"
         >
-          <div className={`h-full ${barClass}`} style={{ width: `${fillPercent}%` }} />
+          <div className={`h-full rounded-full ${barClass}`} style={{ width: `${fillPercent}%` }} />
           {showDailySegments ? <DaySeparators /> : null}
         </div>
         {pacePercent === null ? null : <PaceMarker percent={pacePercent} />}
@@ -373,7 +396,7 @@ function PaceMarker({ percent }: { percent: number }) {
   const clamped = Math.min(100, Math.max(0, percent))
   return (
     <div
-      className="group absolute -top-0.5 flex h-3 w-3 items-center justify-center"
+      className="group absolute -top-0.5 flex h-2.5 w-3 items-center justify-center"
       style={{ left: `calc(${clamped}% - 6px)` }}
     >
       <div aria-hidden className="pointer-events-none h-full w-0.5 rounded-sm bg-ink" />
@@ -447,9 +470,9 @@ function MetersSkeleton() {
     <div className="flex flex-col gap-2">
       {[0, 1, 2].map((row) => (
         <div key={row} className={meterGridClass}>
-          <span className="h-3 w-full rounded bg-cream-2" />
-          <span className="h-2 w-full rounded bg-cream-2" />
-          <span className="h-3 w-full rounded bg-cream-2" />
+          <Skeleton shape="text" className="h-2.5 w-full" />
+          <Skeleton className="h-1.5 w-full rounded-full" />
+          <Skeleton shape="text" className="h-2.5 w-full" />
         </div>
       ))}
     </div>
@@ -475,7 +498,7 @@ class UsageCardErrorBoundary extends Component<BoundaryProps, BoundaryState> {
       // useQuery). Toggling local state here alone would clear the
       // fallback but leave the same broken inner element mounted.
       return (
-        <section className="mb-6 rounded-md border border-border p-4">
+        <section className={usagePanelClasses}>
           <p className="font-mono text-mono text-muted-strong">
             Couldn't display usage stats.{' '}
             <button type="button" className="underline" onClick={this.props.onRetry}>
