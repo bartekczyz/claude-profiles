@@ -140,7 +140,7 @@ mod tests {
     }
 
     /// Opt-in: requires ChatGPT.app installed (so `generate` resolves a GUI
-    /// app for Codex) and write access to /Applications. Verifies a bundle
+    /// app for ChatGPT) and write access to /Applications. Verifies a bundle
     /// left over from before the Codex launcher_prefix rename ("Codex" ->
     /// "ChatGPT") gets cleaned up automatically on the next `generate`.
     #[test]

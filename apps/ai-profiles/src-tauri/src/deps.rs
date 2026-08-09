@@ -1,5 +1,5 @@
 //! Detect external dependencies the app relies on: Claude Desktop, the
-//! Claude Code CLI, Codex Desktop, the Codex CLI, and whether
+//! Claude Code CLI, the ChatGPT desktop app, the Codex CLI, and whether
 //! `~/.local/bin` is on the user's interactive shell PATH.
 
 use std::collections::HashMap;

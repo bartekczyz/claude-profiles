@@ -40,7 +40,7 @@ export function ClaudeMark({ size = 16, className }: MarkProps) {
 }
 
 /**
- * OpenAI's mark — used for Codex profiles since the desktop app they launch
+ * OpenAI's mark — used for ChatGPT profiles since the desktop app they launch
  * is now ChatGPT, and OpenAI doesn't publish a distinct "ChatGPT" glyph
  * separate from their company mark.
  */

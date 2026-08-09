@@ -39,7 +39,7 @@ export function ProfileDetail({ profile, shortcutsEnabled, onEdit, onDelete }: P
         info={<ProfileDetailInfo app={profile.app} command={command} />}
         subline={
           <>
-            <span>{profile.app}</span>
+            <span>{appSpecs[profile.app].displayName}</span>
             <span className="mx-2 text-border">·</span>
             <span className="text-muted-strong">{formatLastUsed(profile.lastUsedAt)}</span>
           </>

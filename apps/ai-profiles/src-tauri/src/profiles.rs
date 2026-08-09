@@ -195,7 +195,7 @@ fn is_valid_hex_color(color: &str) -> bool {
 }
 
 /// True when an existing profile already claims `slug` for the same `app`.
-/// Uniqueness is scoped per app, so a Codex "personal" can coexist with a
+/// Uniqueness is scoped per app, so a ChatGPT "personal" can coexist with a
 /// Claude "personal". `exclude_id` skips a profile by id — used by `update`
 /// so renaming a profile to its own slug doesn't collide with itself.
 fn slug_taken(existing: &[Profile], app: AppKind, slug: &str, exclude_id: Option<&str>) -> bool {

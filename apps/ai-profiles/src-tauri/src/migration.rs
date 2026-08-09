@@ -1,5 +1,5 @@
 //! First-run migration: detect an existing Desktop / CLI installation
-//! (Claude or Codex) and import it as a named profile.
+//! (Claude or ChatGPT) and import it as a named profile.
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};

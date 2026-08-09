@@ -19,7 +19,7 @@ pub struct ProfileUsage {
 pub struct QuotaUsage {
     pub primary: Option<Window>,
     pub secondary: Option<Window>,
-    /// Third "Sonnet-style" window — Claude only; Codex leaves it None.
+    /// Third "Sonnet-style" window — Claude only; ChatGPT leaves it None.
     pub secondary_extra: Option<Window>,
 }
 

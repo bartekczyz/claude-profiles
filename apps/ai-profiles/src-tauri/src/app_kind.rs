@@ -1,5 +1,5 @@
 //! Per-app registry: the single source of truth describing each managed app
-//! (Claude, Codex) and every Claude-specific seam generalised behind it.
+//! (Claude, ChatGPT) and every Claude-specific seam generalised behind it.
 //!
 //! Every path, launcher, and launch incantation that used to hardcode
 //! "Claude" reads from the `AppSpec` returned by [`spec`]. Adding a new app
@@ -43,7 +43,7 @@ pub struct GuiBundleCandidate {
 pub struct AppSpec {
     /// Human-facing product name for the GUI/profile-kind identity — shown in
     /// the profile list, create-profile dialog, and any message about the
-    /// desktop bundle. E.g. `"Claude"`, or `"ChatGPT"` for Codex profiles: the
+    /// desktop bundle. E.g. `"Claude"`, or `"ChatGPT"` for ChatGPT profiles: the
     /// unified desktop app Codex now ships inside (see [`GuiBundleCandidate`]).
     pub display_name: &'static str,
     /// Human-facing name for the CLI specifically, e.g. `"Claude"`. Diverges
