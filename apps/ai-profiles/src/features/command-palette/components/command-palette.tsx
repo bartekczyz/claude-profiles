@@ -88,9 +88,11 @@ export function CommandPalette({
           placeholder="Type a command or search profiles…"
           className="w-full appearance-none border-0 bg-transparent py-3 pr-14 pl-10 font-sans text-[13px] text-ink outline-none placeholder:text-muted-strong"
         />
-        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
-          <Kbd variant="subtle">esc</Kbd>
-        </span>
+        {/* Positioned directly: a wrapper span forms a line box taller than
+            the chip, so centring the wrapper leaves the chip sitting low. */}
+        <Kbd variant="subtle" className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+          esc
+        </Kbd>
       </div>
       <Command.List className="overflow-y-auto p-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:text-eyebrow [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.1em] [&_[cmdk-group-heading]]:text-muted-strong">
         <Command.Empty className="px-3 py-6 text-center text-meta text-muted-strong">No matches.</Command.Empty>
