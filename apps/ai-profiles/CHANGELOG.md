@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/bartekczyz/ai-profiles/compare/v1.0.2...v1.1.0) (2026-08-09)
+
+
+### Added
+
+* **ui:** rebuild the profile pane as grouped rows ([#37](https://github.com/bartekczyz/ai-profiles/issues/37)) ([a427b39](https://github.com/bartekczyz/ai-profiles/commit/a427b397a8aa12ed852e6b40339b5df9f86fb04b))
+
+
+### Fixed
+
+* **cli:** profile wrappers inherit skills, agents and global instructions ([#34](https://github.com/bartekczyz/ai-profiles/issues/34)) ([af64262](https://github.com/bartekczyz/ai-profiles/commit/af64262a5c352a6692b889960c715feebb1d1668))
+* **codex:** recognise ChatGPT.app and rename the Codex GUI identity ([#39](https://github.com/bartekczyz/ai-profiles/issues/39)) ([48272c5](https://github.com/bartekczyz/ai-profiles/commit/48272c5e936351ca642c44a94b8ae5011ed930a5))
+
 ## [1.0.2](https://github.com/bartekczyz/ai-profiles/compare/v1.0.1...v1.0.2) (2026-06-20)
 
 
