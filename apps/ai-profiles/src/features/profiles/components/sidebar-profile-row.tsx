@@ -55,12 +55,13 @@ export function SidebarProfileRow({ name, swatch, surfaces, selected, glyph, sho
       <span className="truncate text-[12.5px] font-medium tracking-[-0.005em] text-ink">{name}</span>
       <SidebarSurfaceIcons surfaces={surfaces} />
       {hasShortcut ? (
-        // Bare mono rather than a Kbd chip: at 200px the sidebar cannot spare
+        // Bare label rather than a Kbd chip: at 200px the sidebar cannot spare
         // the chip's padding and border, and profile names are what the column
-        // is for.
+        // is for. Still `font-kbd`, not `font-mono` — Geist Mono has no ⌘, so
+        // mono here would draw the symbol and the digit in different faces.
         <span
           aria-hidden
-          className="font-mono text-[10px] leading-none text-muted-strong transition-opacity opacity-60 group-hover/row:opacity-100 group-data-[active=true]/row:opacity-100"
+          className="font-kbd text-[10px] leading-none text-muted-strong transition-opacity opacity-60 group-hover/row:opacity-100 group-data-[active=true]/row:opacity-100"
         >
           ⌘{shortcutIndex + 1}
         </span>
