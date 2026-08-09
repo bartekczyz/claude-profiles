@@ -340,7 +340,7 @@ pub fn import_existing_install(app: AppKind, input: ImportExistingInput) -> AppR
     if input.include_cli && existing.cli_path.is_none() {
         return Err(AppError::NotFound(format!(
             "no existing {} CLI install found",
-            app_spec.display_name
+            app_spec.cli_display_name
         )));
     }
 

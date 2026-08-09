@@ -3,6 +3,14 @@ use std::path::PathBuf;
 use crate::app_kind::AppSpec;
 use crate::error::{AppError, AppResult};
 
+/// The stock GUI bundle actually found on disk for an [`AppSpec`], resolved
+/// by [`resolve_gui_app`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedGuiApp {
+    pub bundle_path: PathBuf,
+    pub macos_exec: &'static str,
+}
+
 const APP_DIR_NAME: &str = "ai-profiles";
 
 /// Returns the on-disk data directory for the app.
@@ -66,14 +74,43 @@ pub fn applications_dir() -> PathBuf {
 }
 
 pub fn gui_launcher_path(name: &str, spec: &AppSpec) -> PathBuf {
-    applications_dir().join(format!("{} ({name}).app", spec.launcher_prefix))
+    gui_launcher_path_with_prefix(name, spec.launcher_prefix)
 }
 
-/// Path to the stock (unmanaged) desktop application bundle. This is the app
-/// the synthetic "default" entry launches — distinct from `stock_gui_support_dir`,
-/// which points at the app's *data* directory under Application Support.
-pub fn gui_app_bundle(spec: &AppSpec) -> PathBuf {
-    applications_dir().join(spec.gui_bundle_name)
+/// As [`gui_launcher_path`], but for an explicit prefix rather than a spec's
+/// current one — used to locate a bundle generated under a
+/// `legacy_launcher_prefixes` entry before it was renamed.
+pub fn gui_launcher_path_with_prefix(name: &str, prefix: &str) -> PathBuf {
+    applications_dir().join(format!("{prefix} ({name}).app"))
+}
+
+/// Pure: every path under `/Applications` this app's stock GUI bundle could
+/// occupy, paired with the executable name that bundle would run, newest
+/// candidate first. Distinct from `stock_gui_support_dir`, which points at
+/// the app's *data* directory under Application Support.
+pub fn gui_app_bundle_candidates(spec: &AppSpec) -> Vec<(PathBuf, &'static str)> {
+    spec.gui_bundle_candidates
+        .iter()
+        .map(|candidate| {
+            (
+                applications_dir().join(candidate.bundle_name),
+                candidate.macos_exec,
+            )
+        })
+        .collect()
+}
+
+/// The stock (unmanaged) desktop application bundle actually installed for
+/// `spec`, tried newest-candidate-first — or `None` if no candidate exists.
+/// This is the app the synthetic "default" entry launches.
+pub fn resolve_gui_app(spec: &AppSpec) -> Option<ResolvedGuiApp> {
+    gui_app_bundle_candidates(spec)
+        .into_iter()
+        .find(|(bundle_path, _)| bundle_path.is_dir())
+        .map(|(bundle_path, macos_exec)| ResolvedGuiApp {
+            bundle_path,
+            macos_exec,
+        })
 }
 
 pub fn local_bin_dir() -> AppResult<PathBuf> {
@@ -148,20 +185,45 @@ mod tests {
         );
         assert_eq!(
             gui_launcher_path("Personal", &CODEX),
+            PathBuf::from("/Applications/ChatGPT (Personal).app")
+        );
+    }
+
+    #[test]
+    fn gui_launcher_path_with_prefix_uses_the_given_prefix() {
+        assert_eq!(
+            gui_launcher_path_with_prefix("Personal", "Codex"),
             PathBuf::from("/Applications/Codex (Personal).app")
         );
     }
 
     #[test]
-    fn gui_app_bundle_points_to_applications_bundle() {
+    fn gui_app_bundle_candidates_covers_every_known_bundle_name() {
         assert_eq!(
-            gui_app_bundle(&CLAUDE),
-            PathBuf::from("/Applications/Claude.app")
+            gui_app_bundle_candidates(&CLAUDE),
+            vec![(PathBuf::from("/Applications/Claude.app"), "Claude")]
         );
         assert_eq!(
-            gui_app_bundle(&CODEX),
-            PathBuf::from("/Applications/Codex.app")
+            gui_app_bundle_candidates(&CODEX),
+            vec![
+                (PathBuf::from("/Applications/ChatGPT.app"), "ChatGPT"),
+                (PathBuf::from("/Applications/Codex.app"), "Codex"),
+            ]
         );
+    }
+
+    #[test]
+    fn resolve_gui_app_returns_none_when_no_candidate_exists() {
+        use crate::app_kind::GuiBundleCandidate;
+
+        let spec = AppSpec {
+            gui_bundle_candidates: &[GuiBundleCandidate {
+                bundle_name: "definitely-not-a-real-app-4f6c1e9a.app",
+                macos_exec: "unused",
+            }],
+            ..CLAUDE
+        };
+        assert_eq!(resolve_gui_app(&spec), None);
     }
 
     #[test]

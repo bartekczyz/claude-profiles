@@ -35,7 +35,17 @@ export type AppUsageSpec = {
 
 export type AppSpec = {
   id: AppId
+  /**
+   * Product name for the GUI/profile-kind identity — profile list,
+   * create-profile dialog, "Open X" buttons.
+   */
   displayName: string
+  /**
+   * Product name for the CLI specifically. Diverges from `displayName` only
+   * for Codex, whose desktop app was folded into ChatGPT while the CLI kept
+   * its own identity.
+   */
+  cliDisplayName: string
   hasUsage: boolean
   gui: AppSurfaceSpec
   cli: AppSurfaceSpec
@@ -64,6 +74,7 @@ export type AppSpec = {
 const claude: AppSpec = {
   id: 'claude',
   displayName: 'Claude',
+  cliDisplayName: 'Claude',
   hasUsage: true,
   gui: {
     label: 'Desktop App launcher',
@@ -98,11 +109,16 @@ const claude: AppSpec = {
 
 const codex: AppSpec = {
   id: 'codex',
-  displayName: 'Codex',
+  // OpenAI folded the standalone Codex desktop app into ChatGPT (same
+  // bundle id, renamed bundle/executable — no separate Codex app ships any
+  // more). The CLI is unaffected and still called Codex, hence the
+  // displayName / cliDisplayName split.
+  displayName: 'ChatGPT',
+  cliDisplayName: 'Codex',
   hasUsage: true,
   gui: {
     label: 'Desktop App launcher',
-    description: 'Creates /Applications/Codex (Name).app with an isolated user-data directory.',
+    description: 'Creates /Applications/ChatGPT (Name).app with an isolated user-data directory.',
     installUrl: 'https://chatgpt.com/codex',
   },
   cli: {
@@ -123,7 +139,7 @@ const codex: AppSpec = {
     secondaryExtraShortLabel: null,
   },
   accentVar: '--color-codex',
-  guiBundleName: 'Codex.app',
+  guiBundleName: 'ChatGPT.app',
   cliBinary: 'codex',
   cliWrapperPrefix: 'codex',
   cliConfigEnv: 'CODEX_HOME',

@@ -99,26 +99,40 @@ fn focus_pid(_pid: i32) {}
 /// Focus the running GUI instance bound to `data_dir`, or run `launch` when
 /// none is running. This is the single-instance gate shared by the default
 /// entry and the managed profiles.
+///
+/// If `spec`'s GUI bundle can't be resolved on disk, nothing could possibly
+/// be running under it, so this skips straight to `launch` — which will
+/// itself surface a clear "not installed" error.
 pub fn focus_or_launch<F>(data_dir: &str, spec: &AppSpec, launch: F) -> AppResult<()>
 where
     F: FnOnce() -> AppResult<()>,
 {
-    if let Some(pid) = running_pid(data_dir, spec.gui_macos_exec)? {
-        focus_pid(pid);
-        return Ok(());
+    if let Some(resolved) = crate::paths::resolve_gui_app(spec) {
+        if let Some(pid) = running_pid(data_dir, resolved.macos_exec)? {
+            focus_pid(pid);
+            return Ok(());
+        }
     }
     launch()
 }
 
 /// Launch a fresh GUI instance bound to `data_dir` via
-/// `open -n -a "<app>" --args --user-data-dir=<dir>` — the same incantation
-/// the per-profile launcher `.app` bundles use, just invoked directly. Used
-/// by the default entry, which has no launcher bundle of its own.
+/// `open -n -a <bundle path> --args --user-data-dir=<dir>` — the same
+/// incantation the per-profile launcher `.app` bundles use, just invoked
+/// directly. Used by the default entry, which has no launcher bundle of its
+/// own.
+///
+/// Launches by resolved absolute bundle path rather than a registered app
+/// name, so it keeps working across a bundle rename (as happened when OpenAI
+/// replaced Codex.app with ChatGPT.app) without depending on LaunchServices
+/// having a name-to-bundle mapping for it.
 pub fn open_new_instance(data_dir: &str, spec: &AppSpec) -> AppResult<()> {
+    let resolved = crate::paths::resolve_gui_app(spec)
+        .ok_or_else(|| AppError::Validation(format!("{} isn't installed", spec.display_name)))?;
     let status = Command::new("open")
         .arg("-n")
         .arg("-a")
-        .arg(spec.gui_app_name)
+        .arg(&resolved.bundle_path)
         .arg("--args")
         .arg(format!("--user-data-dir={data_dir}"))
         .status()
@@ -126,7 +140,7 @@ pub fn open_new_instance(data_dir: &str, spec: &AppSpec) -> AppResult<()> {
     if !status.success() {
         return Err(AppError::Validation(format!(
             "`open -n -a {} --args --user-data-dir={data_dir}` exited with status {status}",
-            spec.gui_app_name
+            resolved.bundle_path.display()
         )));
     }
     Ok(())

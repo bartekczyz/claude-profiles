@@ -142,7 +142,7 @@ export function ProfileFormFields({
             <p className="pl-7 font-mono text-mono text-muted-strong">
               Install{' '}
               <a className="underline" href={spec?.cli.installUrl} target="_blank" rel="noreferrer">
-                {spec?.displayName}
+                {spec?.cliDisplayName}
               </a>{' '}
               first.
             </p>

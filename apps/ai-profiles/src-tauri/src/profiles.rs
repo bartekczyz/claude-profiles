@@ -10,8 +10,8 @@ use uuid::Uuid;
 use crate::app_kind::{spec, AppKind};
 use crate::error::{AppError, AppResult};
 use crate::paths::{
-    cli_wrapper_path, ensure_app_dir, gui_app_bundle, gui_launcher_path, profile_dir,
-    profiles_json_path, stock_cli_config_dir, stock_gui_support_dir,
+    cli_wrapper_path, ensure_app_dir, gui_launcher_path, profile_dir, profiles_json_path,
+    resolve_gui_app, stock_cli_config_dir, stock_gui_support_dir,
 };
 use crate::slug::slugify;
 
@@ -429,14 +429,12 @@ fn default_paths(kind: AppKind) -> AppResult<ProfilePaths> {
     // The default entry launches the stock app bundle, not its data directory.
     // Resolve to the application bundle and expose it only when it exists so
     // "Open" / "Launcher" act on a launchable app.
-    let app_bundle = gui_app_bundle(spec);
+    let resolved = resolve_gui_app(spec);
     Ok(ProfilePaths {
         data_dir: stock_cli_config_dir(spec)?.display().to_string(),
         gui_data_dir: stock_gui_support_dir(spec)?.display().to_string(),
         cli_config_dir: stock_cli_config_dir(spec)?.display().to_string(),
-        gui_launcher_path: app_bundle
-            .is_dir()
-            .then(|| app_bundle.display().to_string()),
+        gui_launcher_path: resolved.map(|app| app.bundle_path.display().to_string()),
         cli_wrapper_path: None,
     })
 }

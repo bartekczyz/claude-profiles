@@ -115,7 +115,7 @@ describe('SettingsView', () => {
     renderSettings(<SettingsView onClose={vi.fn()} onOpenMigration={vi.fn()} onOpenAbout={vi.fn()} />)
     await waitFor(() => expect(screen.getByText('Claude Desktop')).toBeInTheDocument())
     expect(screen.getByText('Claude CLI')).toBeInTheDocument()
-    expect(screen.getByText('Codex Desktop')).toBeInTheDocument()
+    expect(screen.getByText('ChatGPT Desktop')).toBeInTheDocument()
     expect(screen.getByText('Codex CLI')).toBeInTheDocument()
     expect(screen.getByText('Shell PATH')).toBeInTheDocument()
   })

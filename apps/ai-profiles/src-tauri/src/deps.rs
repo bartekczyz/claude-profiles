@@ -123,7 +123,7 @@ pub fn shell_path() -> String {
 }
 
 pub fn gui_app_exists(spec: &AppSpec) -> bool {
-    crate::paths::gui_app_bundle(spec).is_dir()
+    crate::paths::resolve_gui_app(spec).is_some()
 }
 
 fn get_shell_path() -> Option<String> {

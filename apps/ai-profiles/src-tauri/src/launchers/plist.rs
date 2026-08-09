@@ -97,11 +97,13 @@ mod tests {
     }
 
     #[test]
-    fn plist_for_codex_profile_uses_codex_display_and_id() {
+    fn plist_for_codex_profile_uses_chatgpt_display_and_codex_id() {
         let mut profile = fixture("Work");
         profile.app = crate::app_kind::AppKind::Codex;
         let xml = String::from_utf8(info_plist(&profile, "0.1.0").unwrap()).unwrap();
-        assert!(xml.contains("<string>Codex (Work)</string>"));
+        // GUI display name follows the desktop bundle (ChatGPT); the id
+        // segment stays the internal "codex" app token either way.
+        assert!(xml.contains("<string>ChatGPT (Work)</string>"));
         assert!(xml.contains("app.ai-profiles.codex.profile."));
     }
 

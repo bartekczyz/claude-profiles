@@ -21,24 +21,48 @@ pub enum AppKind {
     Codex,
 }
 
+/// One possible on-disk identity for this app's stock GUI bundle.
+///
+/// A vendor can rename their app bundle without changing what it does (see
+/// `CODEX`'s doc comment) — a spec lists every name ai-profiles should
+/// recognise, newest first, instead of hardcoding a single string that goes
+/// stale the moment that happens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GuiBundleCandidate {
+    /// Stock bundle file name under `/Applications`, e.g. `"Claude.app"`.
+    pub bundle_name: &'static str,
+    /// Executable inside `Contents/MacOS`, used both to launch the bundle by
+    /// absolute path and to single out its main process in `ps` output, e.g.
+    /// `"Claude"`.
+    pub macos_exec: &'static str,
+}
+
 /// Static description of one managed app. All fields are `&'static str` (plus
 /// `has_usage`) so a spec lives in a `const` and is referenced without alloc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AppSpec {
-    /// Human-facing product name, e.g. `"Claude"`.
+    /// Human-facing product name for the GUI/profile-kind identity — shown in
+    /// the profile list, create-profile dialog, and any message about the
+    /// desktop bundle. E.g. `"Claude"`, or `"ChatGPT"` for Codex profiles: the
+    /// unified desktop app Codex now ships inside (see [`GuiBundleCandidate`]).
     pub display_name: &'static str,
-    /// Name passed to `open -a <name>`, e.g. `"Claude"`.
-    pub gui_app_name: &'static str,
-    /// Stock bundle file name under `/Applications`, e.g. `"Claude.app"`.
-    pub gui_bundle_name: &'static str,
+    /// Human-facing name for the CLI specifically, e.g. `"Claude"`. Diverges
+    /// from `display_name` only for Codex (`"Codex"`), whose desktop app was
+    /// folded into ChatGPT while the CLI kept its own identity.
+    pub cli_display_name: &'static str,
+    /// Possible on-disk identities of the stock GUI bundle, newest first. See
+    /// [`GuiBundleCandidate`].
+    pub gui_bundle_candidates: &'static [GuiBundleCandidate],
     /// Directory name under `~/Library/Application Support` holding the stock
     /// GUI data, e.g. `"Claude"`.
     pub gui_support_dir_name: &'static str,
-    /// Executable inside `Contents/MacOS`, used to single out the main process
-    /// in `ps` output, e.g. `"Claude"`.
-    pub gui_macos_exec: &'static str,
     /// Prefix for generated launcher bundles: `"<prefix> (<name>).app"`.
     pub launcher_prefix: &'static str,
+    /// Prefixes this app's generated launcher bundles used before a rename of
+    /// `launcher_prefix`, so a bundle generated under the old prefix can still
+    /// be found and cleaned up on the next `generate()`. Empty unless
+    /// `launcher_prefix` has changed historically.
+    pub legacy_launcher_prefixes: &'static [&'static str],
     /// Real CLI binary the wrapper execs, e.g. `"claude"`.
     pub cli_binary: &'static str,
     /// Prefix for generated CLI wrappers: `"<prefix>-<slug>"`.
@@ -84,11 +108,14 @@ pub struct AppSpec {
 
 pub const CLAUDE: AppSpec = AppSpec {
     display_name: "Claude",
-    gui_app_name: "Claude",
-    gui_bundle_name: "Claude.app",
+    cli_display_name: "Claude",
+    gui_bundle_candidates: &[GuiBundleCandidate {
+        bundle_name: "Claude.app",
+        macos_exec: "Claude",
+    }],
     gui_support_dir_name: "Claude",
-    gui_macos_exec: "Claude",
     launcher_prefix: "Claude",
+    legacy_launcher_prefixes: &[],
     cli_binary: "claude",
     cli_wrapper_prefix: "claude",
     cli_config_env: "CLAUDE_CONFIG_DIR",
@@ -107,12 +134,28 @@ pub const CLAUDE: AppSpec = AppSpec {
 };
 
 pub const CODEX: AppSpec = AppSpec {
-    display_name: "Codex",
-    gui_app_name: "Codex",
-    gui_bundle_name: "Codex.app",
+    // OpenAI folded the standalone Codex desktop app into ChatGPT (same
+    // CFBundleIdentifier, renamed bundle/executable, confirmed no separate
+    // Codex app is distributed any more — see learn.chatgpt.com/docs/app).
+    // The CLI is unaffected and still called Codex, hence the display-name
+    // split below.
+    display_name: "ChatGPT",
+    cli_display_name: "Codex",
+    // Newest first so a not-yet-updated install of the old standalone app is
+    // still recognised.
+    gui_bundle_candidates: &[
+        GuiBundleCandidate {
+            bundle_name: "ChatGPT.app",
+            macos_exec: "ChatGPT",
+        },
+        GuiBundleCandidate {
+            bundle_name: "Codex.app",
+            macos_exec: "Codex",
+        },
+    ],
     gui_support_dir_name: "Codex",
-    gui_macos_exec: "Codex",
-    launcher_prefix: "Codex",
+    launcher_prefix: "ChatGPT",
+    legacy_launcher_prefixes: &["Codex"],
     cli_binary: "codex",
     cli_wrapper_prefix: "codex",
     cli_config_env: "CODEX_HOME",
@@ -180,7 +223,23 @@ mod tests {
     #[test]
     fn codex_spec_exposes_codex_surface() {
         let codex = spec(AppKind::Codex);
-        assert_eq!(codex.gui_bundle_name, "Codex.app");
+        assert_eq!(
+            codex.gui_bundle_candidates,
+            &[
+                GuiBundleCandidate {
+                    bundle_name: "ChatGPT.app",
+                    macos_exec: "ChatGPT",
+                },
+                GuiBundleCandidate {
+                    bundle_name: "Codex.app",
+                    macos_exec: "Codex",
+                },
+            ]
+        );
+        assert_eq!(codex.display_name, "ChatGPT");
+        assert_eq!(codex.cli_display_name, "Codex");
+        assert_eq!(codex.launcher_prefix, "ChatGPT");
+        assert_eq!(codex.legacy_launcher_prefixes, &["Codex"]);
         assert_eq!(codex.cli_binary, "codex");
         assert_eq!(codex.cli_config_env, "CODEX_HOME");
         assert_eq!(codex.cli_stock_config_dir_name, ".codex");

@@ -8,7 +8,7 @@ describe('WelcomeDialog', () => {
   it('renders the welcome copy when open', () => {
     render(<WelcomeDialog open onContinue={vi.fn()} />)
     expect(screen.getByText(/Welcome to ai-profiles/i)).toBeInTheDocument()
-    expect(screen.getByText(/Claude and Codex accounts/i)).toBeInTheDocument()
+    expect(screen.getByText(/Claude and ChatGPT accounts/i)).toBeInTheDocument()
   })
 
   it('calls onContinue when Continue is clicked', async () => {
