@@ -39,7 +39,6 @@ export function useProfiles(): UseProfilesResult {
       queryClient.setQueryData<Array<Profile>>(queryKeys.profiles.all, (previous) =>
         previous ? [...previous, created] : [created],
       )
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.activity(created.id) })
     },
   })
 
@@ -49,7 +48,6 @@ export function useProfiles(): UseProfilesResult {
       queryClient.setQueryData<Array<Profile>>(queryKeys.profiles.all, (previous) =>
         previous ? setEntry(previous, updated) : [updated],
       )
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.activity(updated.id) })
     },
   })
 
@@ -68,7 +66,6 @@ export function useProfiles(): UseProfilesResult {
       queryClient.setQueryData<Array<Profile>>(queryKeys.profiles.all, (previous) =>
         previous ? setEntry(previous, updated) : [updated],
       )
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.activity(updated.id) })
     },
   })
 

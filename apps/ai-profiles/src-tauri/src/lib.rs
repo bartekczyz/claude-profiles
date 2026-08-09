@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-mod activity;
 mod app_kind;
 mod app_state;
 mod commands;
@@ -96,6 +95,7 @@ pub fn run() {
             commands::delete_profile,
             commands::toggle_surface,
             commands::open_profile_in_app,
+            commands::touch_profile_last_used,
             commands::open_in_finder,
             commands::open_default_gui,
             commands::profile_paths,
@@ -109,8 +109,6 @@ pub fn run() {
             commands::install_path_hook,
             commands::load_app_state,
             commands::update_app_state,
-            commands::list_activity,
-            commands::record_activity,
             commands::get_app_metadata,
             commands::get_profile_usage,
             commands::open_external_url,

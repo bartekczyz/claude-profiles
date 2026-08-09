@@ -1,7 +1,5 @@
 import type { AppId } from './app-registry'
 import type {
-  Activity,
-  ActivityKind,
   AppMetadata,
   AppState,
   AppStatePatch,
@@ -56,16 +54,8 @@ export function openProfileInApp(id: string): Promise<Profile> {
   return invoke<Profile>('open_profile_in_app', { id })
 }
 
-export function listActivity(input: { profileId: string; limit: number }): Promise<Array<Activity>> {
-  return invoke<Array<Activity>>('list_activity', input)
-}
-
-export function recordActivity(input: {
-  profileId: string
-  kind: ActivityKind
-  metadata?: Record<string, unknown> | null
-}): Promise<Profile> {
-  return invoke<Profile>('record_activity', input)
+export function touchProfileLastUsed(id: string): Promise<Profile> {
+  return invoke<Profile>('touch_profile_last_used', { id })
 }
 
 export function openInFinder(path: string): Promise<void> {

@@ -163,4 +163,34 @@ describe('Sidebar', () => {
     const glyphs = document.querySelectorAll('[data-app-glyph]')
     expect(glyphs.length).toBe(0)
   })
+
+  // The per-app text headers are gone, so grouping is now carried entirely by
+  // row order plus a glyph on every row. The two tests above only prove a
+  // glyph exists somewhere — which was equally true when it lived in the
+  // header — so these cover what actually replaced it.
+  it('gives every row its own app glyph once the sidebar spans two apps', () => {
+    const entries = [
+      defaultEntry('claude'),
+      managedEntry({ id: '1', name: 'Personal', app: 'claude' }),
+      defaultEntry('codex'),
+      managedEntry({ id: '2', name: 'Research', app: 'codex' }),
+    ]
+    render(<Sidebar entries={entries} selectedId={null} onSelect={vi.fn()} onCreate={vi.fn()} onSettings={vi.fn()} />)
+    expect(document.querySelectorAll('[data-app-glyph]')).toHaveLength(entries.length)
+  })
+
+  it('keeps each app group contiguous and in registry order', () => {
+    const entries = [
+      defaultEntry('claude'),
+      managedEntry({ id: '1', name: 'Personal', app: 'claude' }),
+      defaultEntry('codex'),
+      managedEntry({ id: '2', name: 'Research', app: 'codex' }),
+    ]
+    render(<Sidebar entries={entries} selectedId={null} onSelect={vi.fn()} onCreate={vi.fn()} onSettings={vi.fn()} />)
+    const rendered = screen.getAllByRole('button').map((button) => button.textContent ?? '')
+    const personal = rendered.findIndex((label) => label.includes('Personal'))
+    const research = rendered.findIndex((label) => label.includes('Research'))
+    expect(personal).toBeGreaterThanOrEqual(0)
+    expect(research).toBeGreaterThan(personal)
+  })
 })

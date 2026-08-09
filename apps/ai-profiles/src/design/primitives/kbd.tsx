@@ -45,7 +45,9 @@ export function Kbd({ variant = 'default', shortcutId, className, children }: Kb
     <kbd
       aria-hidden
       className={cn(
-        'inline-flex h-[18px] min-w-[18px] items-center justify-center px-[5px] rounded-xs font-mono text-[10px] font-medium leading-none tracking-normal',
+        // `font-kbd`, not `font-mono` — see the token's note: Geist Mono has
+        // no modifier glyphs, so a mono chip renders "⌘F" in two typefaces.
+        'inline-flex h-[18px] min-w-[18px] items-center justify-center px-[5px] rounded-xs font-kbd text-[10px] font-medium leading-none tracking-normal',
         variantClasses[variant],
         className,
       )}

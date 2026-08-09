@@ -650,6 +650,34 @@ mod tests {
     }
 
     #[test]
+    fn touch_last_used_stamps_only_the_named_profile_and_persists() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        save_all(&[fixture_profile("a", "A"), fixture_profile("b", "B")]).unwrap();
+
+        let touched = touch_last_used("b").unwrap();
+        assert!(touched.last_used_at.is_some());
+
+        let persisted = load().unwrap();
+        assert_eq!(persisted[0].last_used_at, None);
+        assert_eq!(persisted[1].last_used_at, touched.last_used_at);
+        purge_for_test();
+    }
+
+    #[test]
+    fn touch_last_used_rejects_an_unknown_id() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        purge_for_test();
+        save_all(&[fixture_profile("a", "A")]).unwrap();
+        let err = touch_last_used("ghost").unwrap_err();
+        match err {
+            AppError::NotFound(msg) => assert!(msg.contains("ghost")),
+            other => panic!("expected NotFound, got {other:?}"),
+        }
+        purge_for_test();
+    }
+
+    #[test]
     fn profile_roundtrips_through_json() {
         let original = Profile {
             id: "11111111-1111-1111-1111-111111111111".to_string(),
