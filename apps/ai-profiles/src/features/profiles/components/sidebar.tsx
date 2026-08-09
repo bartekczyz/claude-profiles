@@ -68,8 +68,10 @@ export function Sidebar({ entries, selectedId, searchInputRef, onSelect, onCreat
   const [query, setQuery] = useState('')
 
   const groups = groupEntriesByApp(entries)
-  // App section headers appear only once the sidebar spans more than one app.
-  const showHeaders = groups.length > 1
+  // The per-row app glyph only earns its column once the sidebar actually
+  // spans more than one app — otherwise it would repeat the same mark on every
+  // row and spend width the profile names need.
+  const showAppGlyphs = groups.length > 1
 
   // Flat managed list in store order — the source of truth for the ⌘N chip
   // index and for rebuilding the full order after a per-section reorder.
@@ -80,20 +82,18 @@ export function Sidebar({ entries, selectedId, searchInputRef, onSelect, onCreat
   const canReorder = onReorder !== undefined && query.trim().length === 0
 
   return (
-    <aside className="relative flex w-64 shrink-0 flex-col border-r border-border bg-cream-2 px-3 pt-11 pb-3">
+    <aside className="relative flex w-[200px] shrink-0 flex-col border-r border-border bg-cream-2 px-2 pt-11 pb-3">
       <SidebarBrandMark />
       <SidebarSearchInput value={query} inputRef={searchInputRef} onChange={setQuery} />
-      {showHeaders ? null : (
-        <div className="px-2.5 pt-1.5 pb-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.1em] text-muted-strong">
-          Profiles
-        </div>
-      )}
-      <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto pr-0.5">
+      {/* App groups are separated by a hairline rather than a text header. The
+          rule is a sibling selector, not an index, so a group whose rows are
+          all filtered out takes its separator with it. */}
+      <div className="flex flex-1 flex-col overflow-y-auto pr-0.5 [&>section+section]:mt-[7px] [&>section+section]:border-t [&>section+section]:border-border [&>section+section]:pt-[7px]">
         {groups.map((group) => (
           <AppSection
             key={group.app}
             group={group}
-            showHeader={showHeaders}
+            showAppGlyph={showAppGlyphs}
             selectedId={selectedId}
             query={query}
             canReorder={canReorder}
@@ -132,7 +132,7 @@ export function Sidebar({ entries, selectedId, searchInputRef, onSelect, onCreat
 
 type AppSectionProps = {
   group: SidebarGroup
-  showHeader: boolean
+  showAppGlyph: boolean
   selectedId: string | null
   query: string
   canReorder: boolean
@@ -142,15 +142,19 @@ type AppSectionProps = {
 }
 
 /**
- * One per-app section: an optional header, the app's default row (brand-icon
- * swatch, pinned/non-draggable), then its managed rows (colour swatch,
+ * One per-app section: the app's default row (brand-icon swatch,
+ * pinned/non-draggable), then its managed rows (colour swatch,
  * drag-to-reorder within the section). Managed reorder is confined to the
  * section; the resulting full order threads the reordered ids back through the
  * flat store order so non-section profiles keep their positions.
+ *
+ * The section carries no visible header — which app a row belongs to is stated
+ * by the glyph on the row itself, and the sections are told apart by the
+ * hairline the parent draws between them.
  */
 function AppSection({
   group,
-  showHeader,
+  showAppGlyph,
   selectedId,
   query,
   canReorder,
@@ -168,9 +172,9 @@ function AppSection({
   const trimmedQuery = query.trim().toLowerCase()
   const matches = (name: string) => trimmedQuery.length === 0 || name.toLowerCase().includes(trimmedQuery)
 
-  // Under a section header the default row just reads "Default" — the header
-  // already names the app it belongs to. (entry.name stays the app name for
-  // surfaces without grouping, e.g. the command palette.)
+  // The row reads just "Default" — the app it belongs to is stated by the
+  // glyph in its leading column. (entry.name stays the app name for surfaces
+  // without grouping, e.g. the command palette.)
   const defaultRowName = 'Default'
   const visibleDefault = group.default !== null && matches(defaultRowName) ? group.default : null
   const visibleManaged = group.managed.filter((managedEntry) => matches(managedEntry.profile.name))
@@ -181,6 +185,9 @@ function AppSection({
 
   const shortcutIndexFor = (id: string) => managedFlat.findIndex((managedEntry) => managedEntry.profile.id === id)
   const reorderable = canReorder && group.managed.length > 1
+  // Built once and handed to every row in the section — the mark is per-app,
+  // not per-row, and a single-app sidebar suppresses it entirely.
+  const rowGlyph = showAppGlyph ? <AppGlyph app={group.app} size={13} /> : null
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -207,21 +214,13 @@ function AppSection({
 
   return (
     <section className="flex flex-col gap-px">
-      {showHeader ? (
-        <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-1">
-          <AppGlyph app={group.app} size={13} />
-          <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.1em] text-muted-strong">
-            {appSpecs[group.app].displayName}
-          </span>
-        </div>
-      ) : null}
-
       {visibleDefault ? (
         <SidebarProfileRow
           name={defaultRowName}
           swatch={<OutlinedSwatch size={10} />}
           surfaces={visibleDefault.entry.surfaces}
           selected={entryId(visibleDefault) === selectedId}
+          glyph={rowGlyph}
           onSelect={() => onSelect(entryId(visibleDefault))}
         />
       ) : null}
@@ -259,6 +258,7 @@ function AppSection({
                     swatch={<ManagedSidebarSwatch color={managedEntry.profile.color} />}
                     surfaces={managedEntry.profile.surfaces}
                     selected={managedEntry.profile.id === selectedId}
+                    glyph={rowGlyph}
                     shortcutIndex={shortcutIndexFor(managedEntry.profile.id)}
                     sortableId={managedEntry.profile.id}
                     onSelect={() => onSelect(managedEntry.profile.id)}
@@ -277,6 +277,7 @@ function AppSection({
                 swatch={<ManagedSidebarSwatch color={managedEntry.profile.color} />}
                 surfaces={managedEntry.profile.surfaces}
                 selected={managedEntry.profile.id === selectedId}
+                glyph={rowGlyph}
                 shortcutIndex={shortcutIndexFor(managedEntry.profile.id)}
                 onSelect={() => onSelect(managedEntry.profile.id)}
               />

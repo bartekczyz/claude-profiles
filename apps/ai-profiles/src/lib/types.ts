@@ -31,21 +31,6 @@ export type DefaultEntry = {
 
 export type SidebarEntry = { kind: 'managed'; profile: Profile } | { kind: 'default'; entry: DefaultEntry }
 
-export type ActivityKind =
-  | 'created'
-  | 'renamed'
-  | 'color_changed'
-  | 'surface_toggled'
-  | 'launched_gui'
-  | 'copied_cli'
-  | 'imported'
-
-export type Activity = {
-  kind: ActivityKind
-  at: string
-  metadata?: Record<string, unknown> | null
-}
-
 export type AppError = {
   kind: 'Io' | 'Json' | 'Validation' | 'NotFound'
   message: string
