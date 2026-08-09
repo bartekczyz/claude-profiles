@@ -266,7 +266,7 @@ describe('CreateProfileDialog — app-type picker behaviour', () => {
       </ToastProvider>,
     )
     // Codex is the only installed app — it is pre-selected
-    const link = screen.getByRole('link', { name: /Codex Desktop/ })
+    const link = screen.getByRole('link', { name: /ChatGPT Desktop/ })
     expect(link).toHaveAttribute('href', appSpecs.codex.gui.installUrl)
   })
 })

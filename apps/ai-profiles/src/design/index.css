@@ -19,7 +19,7 @@
    the orange default, so only non-default apps need an override.
 
    Registering --app-accent as a typed <color> lets the browser interpolate it,
-   so switching Claude<->Codex animates the window tint instead of snapping.
+   so switching Claude<->ChatGPT animates the window tint instead of snapping.
    initial-value must be a literal — the light-theme orange. */
 @property --app-accent {
   syntax: "<color>";
@@ -33,12 +33,12 @@
 }
 
 [data-app="codex"] {
-  --app-accent: var(--color-codex);
+  --app-accent: var(--color-chatgpt);
 }
 
 /* Body background — warm cream wash with overlapping accent + steel
    radial gradients. The first radial tracks --app-accent so selecting a
-   Codex entry shifts the window to blue/violet. Switches palette via the
+   ChatGPT entry shifts the window to blue/violet. Switches palette via the
    cream token, so dark mode adopts a much darker base automatically. */
 body {
   background-color: var(--color-base);

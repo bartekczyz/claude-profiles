@@ -10,7 +10,7 @@ import { queryKeys } from '@/lib/query/keys'
 /**
  * Pure: the apps with a detected stock install available to import (a GUI
  * and/or CLI path present), in `appIds` order. Drives every "Detect and
- * import" entry point (command palette, Settings, ⌘I) so a Codex install is
+ * import" entry point (command palette, Settings, ⌘I) so a ChatGPT install is
  * reachable, not just Claude.
  */
 export function importableAppsFrom(existingByApp: Record<AppId, ExistingInstallInfo>): Array<AppId> {

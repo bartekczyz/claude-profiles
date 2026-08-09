@@ -11,7 +11,7 @@ import { useProfiles } from './use-profiles'
  * list (CRUD-backed by the Rust store) and synthetic "default" entries
  * derived from per-app existing-install detection. Default entries — one
  * per detected stock install — always precede the managed list, Claude
- * before Codex (per `appIds` order).
+ * before ChatGPT (per `appIds` order).
  */
 export function useSidebarEntries(): Array<SidebarEntry> {
   const { profiles } = useProfiles()
@@ -54,7 +54,7 @@ export type SidebarGroup = {
 }
 
 /**
- * Pure: groups sidebar entries by app in `appIds` order (Claude before Codex).
+ * Pure: groups sidebar entries by app in `appIds` order (Claude before ChatGPT).
  * Each group carries its synthetic default entry (if any) and its managed
  * profiles in their incoming (store) order. Apps with no entries are omitted.
  * The sidebar renders one section per group.
@@ -81,7 +81,7 @@ export function groupEntriesByApp(entries: Array<SidebarEntry>): Array<SidebarGr
 
 /**
  * Pure: builds one synthetic default entry per app that has a detected
- * stock install. Returns entries in `appIds` order (Claude before Codex).
+ * stock install. Returns entries in `appIds` order (Claude before ChatGPT).
  * Exposed for unit-testing in isolation.
  */
 export function makeDefaultEntries(existingByApp: Record<AppId, ExistingInstallInfo>): Array<DefaultEntry> {

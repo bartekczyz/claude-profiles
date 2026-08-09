@@ -100,7 +100,11 @@ export function MigrationDialog({ open, app, existing, onClose, onImport }: Prop
                 />
               ) : null}
               {existing.cliPath ? (
-                <DetectedRow label={`${spec.displayName} CLI`} path={existing.cliPath} sizeBytes={sizes.cliSizeBytes} />
+                <DetectedRow
+                  label={`${spec.cliDisplayName} CLI`}
+                  path={existing.cliPath}
+                  sizeBytes={sizes.cliSizeBytes}
+                />
               ) : null}
             </ul>
           </section>
@@ -166,7 +170,7 @@ export function MigrationDialog({ open, app, existing, onClose, onImport }: Prop
                     onChange={(event) => setIncludeCli(event.target.checked)}
                     className="h-3.5 w-3.5 cursor-pointer accent-orange"
                   />
-                  {spec.displayName} CLI config
+                  {spec.cliDisplayName} CLI config
                 </label>
               ) : null}
             </div>
@@ -228,7 +232,7 @@ function WhatWillHappenCard({ app }: { app: AppId }) {
           <code className="font-mono text-mono">{spec.cliBinary}</code> will start a fresh install dir.
         </li>
         <li>
-          <strong className="text-ink">{spec.displayName} CLI:</strong> you'll need to log in once.{' '}
+          <strong className="text-ink">{spec.cliDisplayName} CLI:</strong> you'll need to log in once.{' '}
           {app === 'codex' ? (
             <>
               Credentials live in <code className="font-mono text-mono">auth.json</code> under{' '}

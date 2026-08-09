@@ -146,7 +146,7 @@ pub fn open_in_finder(path: String) -> AppResult<()> {
 /// pointed at the stock data directory.
 ///
 /// `focus_or_launch` provides the single-instance guarantee: neither Claude nor
-/// Codex dedupes by data dir (a bare `open -n` would spawn an unbounded number
+/// ChatGPT dedupes by data dir (a bare `open -n` would spawn an unbounded number
 /// of stock windows), so we detect an existing instance ourselves and focus it
 /// instead of launching another.
 #[tauri::command]
@@ -281,7 +281,7 @@ pub fn import_existing_install(app: AppKind, input: ImportExistingInput) -> AppR
     if input.include_cli && existing.cli_path.is_none() {
         return Err(AppError::NotFound(format!(
             "no existing {} CLI install found",
-            app_spec.display_name
+            app_spec.cli_display_name
         )));
     }
 

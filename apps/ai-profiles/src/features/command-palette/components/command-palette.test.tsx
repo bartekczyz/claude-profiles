@@ -91,12 +91,12 @@ describe('CommandPalette', () => {
   it('renders a per-app "Detect and import" row for each importable app', () => {
     setup({ entries: [], importableApps: ['claude', 'codex'] })
     expect(screen.getByText('Detect and import Claude…')).toBeInTheDocument()
-    expect(screen.getByText('Detect and import Codex…')).toBeInTheDocument()
+    expect(screen.getByText('Detect and import ChatGPT…')).toBeInTheDocument()
   })
 
   it('fires onImport with the app when an import row is selected', async () => {
     const { onImport, user } = setup({ entries: [], importableApps: ['codex'] })
-    await user.click(screen.getByText('Detect and import Codex…'))
+    await user.click(screen.getByText('Detect and import ChatGPT…'))
     expect(onImport).toHaveBeenCalledWith('codex')
   })
 

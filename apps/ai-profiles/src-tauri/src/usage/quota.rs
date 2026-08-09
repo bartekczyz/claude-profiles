@@ -304,7 +304,7 @@ fn parse_body(body: &[u8]) -> Result<QuotaUsage, QuotaError> {
     };
     // Anthropic's wire fields map onto the generic windows: the 5-hour window
     // is `primary`, the weekly window is `secondary`, and the weekly-Sonnet
-    // sub-quota is `secondary_extra` (Claude-only; Codex leaves it None).
+    // sub-quota is `secondary_extra` (Claude-only; ChatGPT leaves it None).
     let usage = QuotaUsage {
         primary: parsed.five_hour.map(into_window),
         secondary: parsed.seven_day.map(into_window),

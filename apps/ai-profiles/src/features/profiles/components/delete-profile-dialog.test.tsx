@@ -65,7 +65,7 @@ describe('DeleteProfileDialog', () => {
         onConfirm={vi.fn().mockResolvedValue(undefined)}
       />,
     )
-    expect(screen.getByText(/Codex \(Work\).app/)).toBeInTheDocument()
+    expect(screen.getByText(/ChatGPT \(Work\).app/)).toBeInTheDocument()
     expect(screen.getByText(/\.local\/bin\/codex-work/)).toBeInTheDocument()
   })
 })

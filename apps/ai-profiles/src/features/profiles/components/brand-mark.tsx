@@ -1,6 +1,6 @@
 import type { AppId } from '@/lib/app-registry'
 
-import { useId } from 'react'
+import { cn } from '@/design'
 
 type MarkProps = {
   size?: number
@@ -8,10 +8,15 @@ type MarkProps = {
 }
 
 /**
- * Real vendor brand marks (Claude sunburst, Codex logo), rendered in their
- * native brand colours rather than tinted — these are logos, not glyphs, so
- * they keep their identity across light/dark themes. Paths copied verbatim
- * from the vendor-supplied `icon-claude.svg` / `icon-codex.svg` assets.
+ * Real vendor brand marks (Claude sunburst, OpenAI logo), rendered in their
+ * native brand identity rather than tinted — these are logos, not glyphs.
+ * Claude's mark is a fixed brand colour and keeps it across light/dark
+ * themes; OpenAI's official mark is monochrome (black, white on dark
+ * backgrounds per their own brand guidelines), so it renders via
+ * `currentColor` and defaults to the `ink` text token so it still adapts.
+ * Paths copied verbatim from the vendor-supplied `icon-claude.svg` asset and
+ * from Simple Icons' CC0 `openai.svg` (simpleicons.org — no distinct
+ * "ChatGPT" mark is published; OpenAI's mark is what its own apps use).
  */
 
 export function ClaudeMark({ size = 16, className }: MarkProps) {
@@ -34,47 +39,35 @@ export function ClaudeMark({ size = 16, className }: MarkProps) {
   )
 }
 
-export function CodexMark({ size = 16, className }: MarkProps) {
-  // Unique per instance so multiple Codex marks on one screen don't collide on
-  // the gradient id (invalid duplicate ids otherwise).
-  const gradientId = useId()
+/**
+ * OpenAI's mark — used for ChatGPT profiles since the desktop app they launch
+ * is now ChatGPT, and OpenAI doesn't publish a distinct "ChatGPT" glyph
+ * separate from their company mark.
+ */
+export function ChatGptMark({ size = 16, className }: MarkProps) {
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: decorative brand mark (aria-hidden); always labelled by adjacent text
     <svg
       aria-hidden
       width={size}
       height={size}
-      viewBox="0 0 192 192"
+      viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={cn('text-ink', className)}
     >
       <path
-        d="M64.6807 3.67289C72.388 0.501824 80.7787 -0.643862 89.054 0.344885C99.7207 1.57155 109.225 6.10489 117.566 13.9449C117.673 14.0516 117.822 14.1262 117.961 14.1689C118.111 14.2059 118.269 14.2059 118.419 14.1689C129.264 11.3684 140.743 12.4048 150.91 17.1022L151.411 17.3369L152.649 17.9449C163.292 23.3391 171.593 32.4411 175.987 43.5342C178.217 48.9742 179.326 54.6382 179.347 60.5475C179.508 64.9424 179.026 69.3371 177.918 73.5929C177.863 73.8077 177.864 74.0329 177.92 74.2474C177.976 74.4619 178.085 74.6588 178.238 74.8196C184.574 81.2942 188.777 89.0062 190.857 97.9662C193.939 113.166 190.782 126.873 181.395 139.076L179.945 140.846C173.728 147.963 165.568 153.108 156.467 155.652C156.27 155.709 156.089 155.813 155.939 155.954C155.789 156.095 155.674 156.269 155.603 156.462C153.566 162.34 151.518 167.374 147.71 172.398C138.11 185.06 124.009 192.089 108.126 192.004C95.4647 191.94 84.2434 187.31 74.4514 178.116C74.304 177.978 74.1227 177.881 73.9259 177.836C73.7292 177.791 73.524 177.799 73.3314 177.86C69.1927 179.193 65.0114 179.385 60.4887 179.332C53.2851 179.274 46.1897 177.574 39.742 174.361C32.9882 171.014 27.108 166.138 22.5687 160.121C20.9474 157.966 19.3367 155.94 18.1527 153.54C16.5363 150.246 15.2156 146.816 14.206 143.289C12.0748 135.264 12.0235 126.828 14.0567 118.777C14.1236 118.585 14.1455 118.381 14.1207 118.18C14.0842 117.982 13.9829 117.802 13.8327 117.668C8.90543 112.68 5.13944 106.667 2.80337 100.057C1.24977 95.9853 0.346288 91.6946 0.126033 87.3422C-0.261478 81.6097 0.245934 75.8519 1.63003 70.2756C5.2247 58.4142 12.1047 49.1022 22.2487 42.3502C24.51 40.8462 26.654 39.6729 28.6594 38.8302C30.9527 37.8809 33.246 37.0809 35.55 36.4089C35.7147 36.3578 35.8642 36.2668 35.9851 36.144C36.1061 36.0211 36.1948 35.8703 36.2434 35.7049C37.9928 29.4227 41.0013 23.5617 45.086 18.4782C50.2352 11.9396 56.9843 6.84018 64.6807 3.67289ZM101.822 116.366C100.089 116.463 98.4581 117.221 97.2653 118.482C96.0726 119.744 95.408 121.414 95.408 123.15C95.408 124.886 96.0726 126.557 97.2653 127.818C98.4581 129.08 100.089 129.837 101.822 129.934H140.606C141.529 129.986 142.453 129.849 143.321 129.531C144.189 129.214 144.983 128.723 145.655 128.087C146.326 127.452 146.861 126.687 147.227 125.838C147.593 124.989 147.781 124.075 147.781 123.15C147.781 122.226 147.593 121.311 147.227 120.462C146.861 119.613 146.326 118.848 145.655 118.213C144.983 117.578 144.189 117.087 143.321 116.769C142.453 116.452 141.529 116.314 140.606 116.366H101.822ZM58.2594 66.4569C57.3363 64.9534 55.8646 63.868 54.1556 63.43C52.4466 62.9921 50.6343 63.2361 49.1019 64.1103C47.5696 64.9846 46.4373 66.4206 45.9446 68.1146C45.452 69.8086 45.6375 71.6279 46.462 73.1876L60.03 96.9102L46.526 119.694C46.0715 120.461 45.7724 121.31 45.646 122.193C45.5195 123.075 45.5681 123.974 45.789 124.838C46.0099 125.701 46.3987 126.513 46.9333 127.226C47.4679 127.94 48.1378 128.541 48.9047 128.996C49.6716 129.45 50.5206 129.749 51.403 129.876C52.2855 130.002 53.1843 129.953 54.048 129.733C54.9117 129.512 55.7235 129.123 56.4369 128.588C57.1503 128.054 57.7515 127.384 58.206 126.617L73.7154 100.43C74.3269 99.3986 74.6539 98.2233 74.6633 97.0241C74.6727 95.8249 74.364 94.6446 73.7687 93.6035L58.2594 66.4569Z"
-        fill={`url(#${gradientId})`}
+        d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"
+        fill="currentColor"
       />
-      <defs>
-        <linearGradient
-          id={gradientId}
-          x1="95.998"
-          y1="0.00355192"
-          x2="95.998"
-          y2="192.004"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#B1A7FF" />
-          <stop offset="0.5" stopColor="#7A9DFF" />
-          <stop offset="1" stopColor="#3941FF" />
-        </linearGradient>
-      </defs>
     </svg>
   )
 }
 
-/** Brand mark for an app, in its native colours. */
+/** Brand mark for an app, in its native identity. */
 export function BrandMark({ app, size, className }: { app: AppId; size?: number; className?: string }) {
   if (app === 'codex') {
-    return <CodexMark size={size} className={className} />
+    return <ChatGptMark size={size} className={className} />
   }
   return <ClaudeMark size={size} className={className} />
 }

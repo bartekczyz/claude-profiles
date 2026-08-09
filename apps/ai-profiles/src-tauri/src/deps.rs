@@ -1,5 +1,5 @@
 //! Detect external dependencies the app relies on: Claude Desktop, the
-//! Claude Code CLI, Codex Desktop, the Codex CLI, and whether
+//! Claude Code CLI, the ChatGPT desktop app, the Codex CLI, and whether
 //! `~/.local/bin` is on the user's interactive shell PATH.
 
 use std::collections::HashMap;
@@ -123,7 +123,7 @@ pub fn shell_path() -> String {
 }
 
 pub fn gui_app_exists(spec: &AppSpec) -> bool {
-    crate::paths::gui_app_bundle(spec).is_dir()
+    crate::paths::resolve_gui_app(spec).is_some()
 }
 
 fn get_shell_path() -> Option<String> {

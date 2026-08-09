@@ -102,7 +102,7 @@ function AppContent() {
   const [rightPane, setRightPane] = useState<RightPane>({ kind: 'profile' })
   // Which app's import dialog is open (null = closed). The originating
   // surface (default-entry "Migrate", Settings, palette, ⌘I) picks the app
-  // so a Codex default opens a Codex import, not the Claude one.
+  // so a ChatGPT default opens a ChatGPT import, not the Claude one.
   const [migrationApp, setMigrationApp] = useState<AppId | null>(null)
 
   const migrationByApp: Record<AppId, ReturnType<typeof useMigration>> = {
@@ -112,7 +112,7 @@ function AppContent() {
   const activeMigration = migrationApp ? migrationByApp[migrationApp] : null
 
   // Apps with a detected stock install — drives every "Detect and import"
-  // entry point (⌘I, palette, Settings) so Codex is reachable, not just Claude.
+  // entry point (⌘I, palette, Settings) so ChatGPT is reachable, not just Claude.
   const importableApps = importableAppsFrom({
     claude: claudeMigration.existing,
     codex: codexMigration.existing,

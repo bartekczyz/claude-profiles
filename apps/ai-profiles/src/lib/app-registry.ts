@@ -28,14 +28,24 @@ export type AppUsageSpec = {
   primaryShortLabel: string
   secondaryLabel: string
   secondaryShortLabel: string
-  /** Third "Sonnet-style" meter — null for apps without one (Codex). */
+  /** Third "Sonnet-style" meter — null for apps without one (ChatGPT). */
   secondaryExtraLabel: string | null
   secondaryExtraShortLabel: string | null
 }
 
 export type AppSpec = {
   id: AppId
+  /**
+   * Product name for the GUI/profile-kind identity — profile list,
+   * create-profile dialog, "Open X" buttons.
+   */
   displayName: string
+  /**
+   * Product name for the CLI specifically. Diverges from `displayName` only
+   * for Codex, whose desktop app was folded into ChatGPT while the CLI kept
+   * its own identity.
+   */
+  cliDisplayName: string
   hasUsage: boolean
   gui: AppSurfaceSpec
   cli: AppSurfaceSpec
@@ -64,6 +74,7 @@ export type AppSpec = {
 const claude: AppSpec = {
   id: 'claude',
   displayName: 'Claude',
+  cliDisplayName: 'Claude',
   hasUsage: true,
   gui: {
     label: 'Desktop App launcher',
@@ -98,11 +109,16 @@ const claude: AppSpec = {
 
 const codex: AppSpec = {
   id: 'codex',
-  displayName: 'Codex',
+  // OpenAI folded the standalone Codex desktop app into ChatGPT (same
+  // bundle id, renamed bundle/executable — no separate Codex app ships any
+  // more). The CLI is unaffected and still called Codex, hence the
+  // displayName / cliDisplayName split.
+  displayName: 'ChatGPT',
+  cliDisplayName: 'Codex',
   hasUsage: true,
   gui: {
     label: 'Desktop App launcher',
-    description: 'Creates /Applications/Codex (Name).app with an isolated user-data directory.',
+    description: 'Creates /Applications/ChatGPT (Name).app with an isolated user-data directory.',
     installUrl: 'https://chatgpt.com/codex',
   },
   cli: {
@@ -111,10 +127,10 @@ const codex: AppSpec = {
     installUrl: 'https://www.npmjs.com/package/@openai/codex',
   },
   usage: {
-    noCredentials: 'Sign in to Codex once with this profile to see usage.',
+    noCredentials: 'Sign in to ChatGPT once with this profile to see usage.',
     unauthorized: 'Token refresh needed — run `codex` in a terminal once, then retry.',
     rateLimited: 'Rate limited by OpenAI. Try again in a few minutes.',
-    networkError: "Couldn't read Codex usage — make sure the Codex CLI is installed and signed in.",
+    networkError: "Couldn't read ChatGPT usage — make sure the Codex CLI is installed and signed in.",
     primaryLabel: '5-hour window',
     primaryShortLabel: '5h',
     secondaryLabel: 'Weekly',
@@ -122,8 +138,8 @@ const codex: AppSpec = {
     secondaryExtraLabel: null,
     secondaryExtraShortLabel: null,
   },
-  accentVar: '--color-codex',
-  guiBundleName: 'Codex.app',
+  accentVar: '--color-chatgpt',
+  guiBundleName: 'ChatGPT.app',
   cliBinary: 'codex',
   cliWrapperPrefix: 'codex',
   cliConfigEnv: 'CODEX_HOME',
@@ -137,7 +153,7 @@ export const appIds: ReadonlyArray<AppId> = ['claude', 'codex']
 
 /**
  * The per-profile CLI command for a managed profile, e.g. `claude-work`
- * for a Claude profile slugged `work`, `codex-work` for a Codex one. Single
+ * for a Claude profile slugged `work`, `codex-work` for a ChatGPT one. Single
  * source of truth for the wrapper command — used by the surface cards,
  * command palette, copy-CLI shortcut, and clipboard copies so the string is
  * derived in one place rather than hardcoded as `claude-<slug>`.
@@ -148,7 +164,7 @@ export function wrapperCommand(app: AppId, slug: string): string {
 
 /**
  * The wrapper file installed under `~/.local/bin` for a managed profile,
- * e.g. `~/.local/bin/claude-work`. Used by the delete dialog so a Codex
+ * e.g. `~/.local/bin/claude-work`. Used by the delete dialog so a ChatGPT
  * profile lists the correct file to remove.
  */
 export function wrapperFileName(app: AppId, slug: string): string {

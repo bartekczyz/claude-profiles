@@ -55,7 +55,7 @@ function NoProfilesYet({ onCreate }: NoProfilesYetProps) {
         Create your first profile.
       </h1>
       <p className="m-0 mb-5 max-w-[380px] text-[13.5px] leading-[1.55] tracking-[-0.003em] text-muted">
-        Each profile is one isolated Claude or Codex account, with its own Desktop launcher and CLI wrapper. Logins,
+        Each profile is one isolated Claude or ChatGPT account, with its own Desktop launcher and CLI wrapper. Logins,
         history, and chats stay isolated.
       </p>
       <Button
@@ -101,7 +101,7 @@ function ClaudeNotDetected({ onRefresh }: ClaudeNotDetectedProps) {
         Install Claude to begin.
       </h1>
       <p className="m-0 mb-6 max-w-[420px] text-[13.5px] leading-[1.55] tracking-[-0.003em] text-muted">
-        ai-profiles wraps the Claude and Codex desktop apps and CLIs. Install Claude to get started.
+        ai-profiles wraps the Claude and ChatGPT desktop apps and CLIs. Install Claude to get started.
       </p>
       <div className="mb-6 flex w-full max-w-[440px] flex-col gap-2.5 text-left">
         <div className="rounded-lg border border-border bg-white px-3.5 py-3 text-[12.5px] leading-[1.5] text-ink-soft dark:bg-cream-2">

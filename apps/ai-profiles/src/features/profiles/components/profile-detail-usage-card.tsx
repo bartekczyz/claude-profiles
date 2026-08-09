@@ -247,7 +247,7 @@ function quotaErrorShort(quotaError: QuotaError): string {
 }
 
 // Resolves the message shown in place of the meters for a given error code.
-// All app-specific copy lives in the registry so a Codex pane never names
+// All app-specific copy lives in the registry so a ChatGPT pane never names
 // Anthropic (and vice versa); unknown stays neutral.
 function quotaErrorMessage(app: AppId, quotaError: QuotaError, cliCommand: string): string {
   const usage = appSpecs[app].usage

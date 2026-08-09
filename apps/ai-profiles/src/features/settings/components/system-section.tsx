@@ -55,7 +55,11 @@ function buildAppRows(dependencies: Dependencies): Array<Row> {
     const deps = dependencies.apps[id]
     return [
       { label: `${spec.displayName} Desktop`, tone: deps.guiInstalled ? 'success' : 'warning', detail: MISSING_DETAIL },
-      { label: `${spec.displayName} CLI`, tone: deps.cliInstalled ? 'success' : 'warning', detail: MISSING_DETAIL },
+      {
+        label: `${spec.cliDisplayName} CLI`,
+        tone: deps.cliInstalled ? 'success' : 'warning',
+        detail: MISSING_DETAIL,
+      },
     ]
   })
 }
@@ -86,7 +90,7 @@ function buildRows(
  * Consolidated System status card.
  *
  * Rows: two per managed app (Desktop / CLI) from the registry, plus Shell
- * PATH and Updates — six rows in total when both Claude and Codex are
+ * PATH and Updates — six rows in total when both Claude and ChatGPT are
  * registered. Each row shows a status dot (success/warning/neutral), a
  * label, and a mono detail string. Beneath the card a hookline lets the
  * user re-install the shell hook in one click and an updater hookline lets
