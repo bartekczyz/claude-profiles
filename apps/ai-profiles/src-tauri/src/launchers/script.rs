@@ -41,7 +41,7 @@ mod tests {
         assert!(launcher_script("abc", &CLAUDE)
             .contains(r#"exec open -n -a "Claude" --args --user-data-dir="$DATA_DIR""#));
         assert!(launcher_script("abc", &CODEX)
-            .contains(r#"exec open -n -a "Codex" --args --user-data-dir="$DATA_DIR""#));
+            .contains(r#"exec open -n -a "ChatGPT" --args --user-data-dir="$DATA_DIR""#));
     }
 
     #[test]

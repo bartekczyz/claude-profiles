@@ -66,7 +66,18 @@ pub fn applications_dir() -> PathBuf {
 }
 
 pub fn gui_launcher_path(name: &str, spec: &AppSpec) -> PathBuf {
-    applications_dir().join(format!("{} ({name}).app", spec.launcher_prefix))
+    gui_launcher_path_for_prefix(name, spec.launcher_prefix)
+}
+
+fn gui_launcher_path_for_prefix(name: &str, prefix: &str) -> PathBuf {
+    applications_dir().join(format!("{prefix} ({name}).app"))
+}
+
+pub fn legacy_gui_launcher_paths(name: &str, spec: &AppSpec) -> Vec<PathBuf> {
+    spec.legacy_launcher_prefixes
+        .iter()
+        .map(|prefix| gui_launcher_path_for_prefix(name, prefix))
+        .collect()
 }
 
 /// Path to the stock (unmanaged) desktop application bundle. This is the app
@@ -148,7 +159,16 @@ mod tests {
         );
         assert_eq!(
             gui_launcher_path("Personal", &CODEX),
-            PathBuf::from("/Applications/Codex (Personal).app")
+            PathBuf::from("/Applications/ChatGPT (Personal).app")
+        );
+    }
+
+    #[test]
+    fn legacy_gui_launcher_paths_use_legacy_prefixes() {
+        assert!(legacy_gui_launcher_paths("Personal", &CLAUDE).is_empty());
+        assert_eq!(
+            legacy_gui_launcher_paths("Personal", &CODEX),
+            vec![PathBuf::from("/Applications/Codex (Personal).app")]
         );
     }
 
@@ -160,7 +180,7 @@ mod tests {
         );
         assert_eq!(
             gui_app_bundle(&CODEX),
-            PathBuf::from("/Applications/Codex.app")
+            PathBuf::from("/Applications/ChatGPT.app")
         );
     }
 

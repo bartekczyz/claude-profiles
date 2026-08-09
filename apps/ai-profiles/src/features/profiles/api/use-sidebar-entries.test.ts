@@ -22,7 +22,7 @@ describe('makeDefaultEntries', () => {
     const entries = makeDefaultEntries(
       byApp(
         existing({ cliPath: '/Users/me/.claude' }),
-        existing({ guiPath: '/Applications/Codex.app', cliPath: '/Users/me/.codex' }),
+        existing({ guiPath: '/Applications/ChatGPT.app', cliPath: '/Users/me/.codex' }),
       ),
     )
     expect(entries.map((entry) => entry.id)).toEqual(['default:claude', 'default:codex'])
@@ -31,7 +31,7 @@ describe('makeDefaultEntries', () => {
   })
 
   it('emits only codex when claude is absent', () => {
-    const entries = makeDefaultEntries(byApp(existing(), existing({ guiPath: '/Applications/Codex.app' })))
+    const entries = makeDefaultEntries(byApp(existing(), existing({ guiPath: '/Applications/ChatGPT.app' })))
     expect(entries.map((entry) => entry.id)).toEqual(['default:codex'])
   })
 

@@ -36,6 +36,8 @@ export type AppUsageSpec = {
 export type AppSpec = {
   id: AppId
   displayName: string
+  /** CLI product name when it differs from the desktop brand (ChatGPT/Codex). */
+  cliDisplayName: string
   hasUsage: boolean
   gui: AppSurfaceSpec
   cli: AppSurfaceSpec
@@ -64,6 +66,7 @@ export type AppSpec = {
 const claude: AppSpec = {
   id: 'claude',
   displayName: 'Claude',
+  cliDisplayName: 'Claude',
   hasUsage: true,
   gui: {
     label: 'Desktop App launcher',
@@ -98,12 +101,13 @@ const claude: AppSpec = {
 
 const codex: AppSpec = {
   id: 'codex',
-  displayName: 'Codex',
+  displayName: 'ChatGPT',
+  cliDisplayName: 'Codex',
   hasUsage: true,
   gui: {
     label: 'Desktop App launcher',
-    description: 'Creates /Applications/Codex (Name).app with an isolated user-data directory.',
-    installUrl: 'https://chatgpt.com/codex',
+    description: 'Creates /Applications/ChatGPT (Name).app with an isolated user-data directory.',
+    installUrl: 'https://chatgpt.com/download/',
   },
   cli: {
     label: 'Codex CLI wrapper',
@@ -111,10 +115,10 @@ const codex: AppSpec = {
     installUrl: 'https://www.npmjs.com/package/@openai/codex',
   },
   usage: {
-    noCredentials: 'Sign in to Codex once with this profile to see usage.',
+    noCredentials: 'Sign in to ChatGPT once with this profile to see usage.',
     unauthorized: 'Token refresh needed — run `codex` in a terminal once, then retry.',
     rateLimited: 'Rate limited by OpenAI. Try again in a few minutes.',
-    networkError: "Couldn't read Codex usage — make sure the Codex CLI is installed and signed in.",
+    networkError: "Couldn't read ChatGPT usage — make sure the Codex CLI is installed and signed in.",
     primaryLabel: '5-hour window',
     primaryShortLabel: '5h',
     secondaryLabel: 'Weekly',
@@ -123,7 +127,7 @@ const codex: AppSpec = {
     secondaryExtraShortLabel: null,
   },
   accentVar: '--color-codex',
-  guiBundleName: 'Codex.app',
+  guiBundleName: 'ChatGPT.app',
   cliBinary: 'codex',
   cliWrapperPrefix: 'codex',
   cliConfigEnv: 'CODEX_HOME',

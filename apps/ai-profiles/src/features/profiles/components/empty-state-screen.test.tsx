@@ -14,6 +14,14 @@ const allInstalled: Dependencies = {
   localBinOnPath: true,
 }
 
+const onlyChatGptInstalled: Dependencies = {
+  apps: {
+    claude: { guiInstalled: false, cliInstalled: false },
+    codex: { guiInstalled: true, cliInstalled: false },
+  },
+  localBinOnPath: false,
+}
+
 const noneInstalled: Dependencies = {
   apps: {
     claude: { guiInstalled: false, cliInstalled: false },
@@ -30,12 +38,17 @@ describe('EmptyStateScreen', () => {
     expect(onCreate).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the not-detected state and calls onRefresh when neither Claude is installed', async () => {
+  it('shows the not-detected state and calls onRefresh when no supported surface is installed', async () => {
     const onRefresh = vi.fn().mockResolvedValue(undefined)
     render(<EmptyStateScreen dependencies={noneInstalled} onCreate={vi.fn()} onRefresh={onRefresh} />)
     expect(screen.queryByRole('button', { name: /New profile/ })).not.toBeInTheDocument()
     await userEvent.setup().click(screen.getByRole('button', { name: /Check again/ }))
     expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows the first profile when only ChatGPT Desktop is installed', () => {
+    render(<EmptyStateScreen dependencies={onlyChatGptInstalled} onCreate={vi.fn()} onRefresh={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /New profile/ })).toBeInTheDocument()
   })
 
   it('falls back to the create CTA when only one surface is installed', () => {

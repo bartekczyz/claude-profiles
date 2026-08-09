@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::app_kind::AppSpec;
 use crate::error::{AppError, AppResult};
 use crate::launchers::{icons, plist, script};
-use crate::paths::gui_launcher_path;
+use crate::paths::{gui_launcher_path, legacy_gui_launcher_paths};
 use crate::profiles::Profile;
 
 /// Build the .app bundle for `profile` at `/Applications/<App> (<Name>).app/`.
@@ -45,6 +45,15 @@ pub fn generate(profile: &Profile, version: &str) -> AppResult<PathBuf> {
     let icns_bytes = icons::render_icns(&profile.color)?;
     fs::write(resources.join("AppIcon.icns"), icns_bytes)?;
 
+    // The desktop Codex app was renamed to ChatGPT. Once the replacement is
+    // complete, remove any launcher generated under the old `Codex (Name)`
+    // prefix. This is deliberately best-effort: `remove_one` refuses bundles
+    // without our identifier, and an unrelated app at that legacy path must
+    // never prevent the new launcher from being created.
+    for legacy_bundle in legacy_gui_launcher_paths(&profile.name, spec) {
+        let _ = remove_one(&legacy_bundle);
+    }
+
     Ok(bundle)
 }
 
@@ -52,7 +61,14 @@ pub fn generate(profile: &Profile, version: &str) -> AppResult<PathBuf> {
 /// exists and looks like one we generated (sanity check on the Info.plist
 /// contents). No-ops if the bundle doesn't exist.
 pub fn remove(name: &str, spec: &AppSpec) -> AppResult<()> {
-    let bundle = gui_launcher_path(name, spec);
+    remove_one(&gui_launcher_path(name, spec))?;
+    for bundle in legacy_gui_launcher_paths(name, spec) {
+        remove_one(&bundle)?;
+    }
+    Ok(())
+}
+
+fn remove_one(bundle: &PathBuf) -> AppResult<()> {
     if !bundle.exists() {
         return Ok(());
     }
@@ -67,7 +83,7 @@ pub fn remove(name: &str, spec: &AppSpec) -> AppResult<()> {
             )));
         }
     }
-    fs::remove_dir_all(&bundle)?;
+    fs::remove_dir_all(bundle)?;
     Ok(())
 }
 

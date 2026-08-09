@@ -55,7 +55,7 @@ function buildAppRows(dependencies: Dependencies): Array<Row> {
     const deps = dependencies.apps[id]
     return [
       { label: `${spec.displayName} Desktop`, tone: deps.guiInstalled ? 'success' : 'warning', detail: MISSING_DETAIL },
-      { label: `${spec.displayName} CLI`, tone: deps.cliInstalled ? 'success' : 'warning', detail: MISSING_DETAIL },
+      { label: `${spec.cliDisplayName} CLI`, tone: deps.cliInstalled ? 'success' : 'warning', detail: MISSING_DETAIL },
     ]
   })
 }

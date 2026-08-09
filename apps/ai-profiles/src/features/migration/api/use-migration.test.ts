@@ -86,7 +86,7 @@ describe('importableAppsFrom', () => {
   }
 
   it('lists apps with a detected gui or cli install, claude before codex', () => {
-    const apps = importableAppsFrom(byApp(existing({ cliPath: '/x/.claude' }), existing({ guiPath: '/A/Codex.app' })))
+    const apps = importableAppsFrom(byApp(existing({ cliPath: '/x/.claude' }), existing({ guiPath: '/A/ChatGPT.app' })))
     expect(apps).toEqual(['claude', 'codex'])
   })
 

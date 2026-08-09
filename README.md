@@ -1,6 +1,6 @@
 # ai-profiles
 
-> Run multiple Claude and Codex accounts on one Mac — the desktop app and the CLI, side by side. Free and open-source.
+> Run multiple Claude and OpenAI accounts on one Mac — Claude Desktop, ChatGPT Desktop, and their CLIs side by side. Free and open-source.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="apps/landing/public/screenshot-dark.png">
@@ -33,13 +33,13 @@ The `.dmg` lands in `apps/ai-profiles/src-tauri/target/release/bundle/dmg/`. mac
 | App | Desktop launcher | CLI wrapper | Auth isolation |
 |-----|-----------------|-------------|----------------|
 | **Claude** (Desktop + Claude Code CLI) | `Claude (<Name>).app` | `claude-<slug>` (sets `CLAUDE_CONFIG_DIR`) | macOS Keychain entry derived from config dir |
-| **Codex** (Desktop + Codex CLI) | `Codex (<Name>).app` | `codex-<slug>` (sets `CODEX_HOME`) | plain `auth.json` inside profile's `CODEX_HOME` — isolation is automatic |
+| **OpenAI** (ChatGPT Desktop + Codex CLI) | `ChatGPT (<Name>).app` | `codex-<slug>` (sets `CODEX_HOME`) | plain `auth.json` inside profile's `CODEX_HOME` — isolation is automatic |
 
 ## Using ai-profiles
 
 Create a profile from the sidebar — choose an app (Claude or Codex), give it a name, pick a colour, and choose which surfaces you want (desktop app, CLI, or both). The app generates everything you need on the spot:
 
-- **Desktop app.** A `Claude (<Name>).app` or `Codex (<Name>).app` launcher lands in `/Applications`. Double-click to open the app with that profile's account, history, and settings. Spotlight, Launchpad, Finder, and ⌘-Tab all see it as its own app, tinted with the profile colour.
+- **Desktop app.** A `Claude (<Name>).app` or `ChatGPT (<Name>).app` launcher lands in `/Applications`. Double-click to open the app with that profile's account, history, and settings. Spotlight, Launchpad, Finder, and ⌘-Tab all see it as its own app, tinted with the profile colour.
 - **CLI.** A `claude-<slug>` or `codex-<slug>` command appears on your `PATH`. Run it in any terminal to start the CLI with that profile's config and login. Each profile keeps its own session and credentials.
 
 Switch profiles from the sidebar, with ⌘1..⌘9 to jump to a slot, ⌘F to filter the list, or ⌘K to open the command palette. ⌘N creates a new profile, ⌘, opens Settings.
@@ -63,7 +63,7 @@ Each profile's detail page shows that profile's current quota utilization alongs
 **Creating your first profile when you already have Claude or Codex installed.** Clicking "+ New profile" opens a fork dialog with two paths:
 
 - **Just add a new profile, keep existing install as-is** (default — press Enter). Leaves your existing install untouched. `claude` or `codex` keeps working with your current account. The new profile is fully separate and accessed via `claude-<slug>` or `codex-<slug>`.
-- **Migrate existing install into a profile.** Adopts your existing `~/.claude` (and `~/Library/Application Support/Claude` if Claude Desktop is installed), or `~/.codex` (and `~/Library/Application Support/Codex` if Codex Desktop is installed), as your first profile. See "What migrate does" below.
+- **Migrate existing install into a profile.** Adopts your existing `~/.claude` (and `~/Library/Application Support/Claude` if Claude Desktop is installed), or `~/.codex` (and `~/Library/Application Support/Codex` if ChatGPT Desktop is installed), as your first profile. The OpenAI support directory keeps its legacy `Codex` name after the desktop-app merge. See "What migrate does" below.
 
 ### What migrate does
 
@@ -71,7 +71,7 @@ Three steps, in order:
 
 1. **Copies** your existing data into the new profile dir under `~/Library/Application Support/ai-profiles/profiles/<id>/`.
 2. **Moves** the originals (`~/.claude` and/or `~/Library/Application Support/Claude` for Claude; `~/.codex` and/or `~/Library/Application Support/Codex` for Codex) into a timestamped backup dir under `~/Library/Application Support/ai-profiles/migration-backup-<timestamp>/`.
-3. **Generates** the per-profile launcher (`Claude (<Name>).app` or `Codex (<Name>).app`) and CLI wrapper (`claude-<slug>` or `codex-<slug>` in `~/.local/bin`).
+3. **Generates** the per-profile launcher (`Claude (<Name>).app` or `ChatGPT (<Name>).app`) and CLI wrapper (`claude-<slug>` or `codex-<slug>` in `~/.local/bin`).
 
 ### After migrating
 

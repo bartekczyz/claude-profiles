@@ -17,20 +17,18 @@ type Props = {
  * Rendered without a sidebar so the screen owns the whole window.
  *
  * Two modes:
- * - Claude detected → "Create your first profile" CTA.
- * - Neither Claude Desktop nor the CLI detected → install hints + a
+ * - Any supported surface detected → "Create your first profile" CTA.
+ * - No Claude or ChatGPT/Codex surface detected → install hints + a
  *   "Check again" button, because the create dialog can't be submitted
  *   without at least one surface.
  */
 export function EmptyStateScreen({ dependencies, onCreate, onRefresh }: Props) {
-  // Gate is intentionally Claude-only for now: the "not detected" screen and
-  // its CTA speak to installing Claude. Making this app-agnostic (show it only
-  // when NO managed app is detected) is a tracked follow-up, not part of the
-  // dual-vendor copy pass.
-  const claudeMissing = !dependencies.apps.claude.guiInstalled && !dependencies.apps.claude.cliInstalled
+  const hasSupportedSurface = Object.values(dependencies.apps).some(
+    ({ guiInstalled, cliInstalled }) => guiInstalled || cliInstalled,
+  )
 
-  if (claudeMissing) {
-    return <ClaudeNotDetected onRefresh={onRefresh} />
+  if (!hasSupportedSurface) {
+    return <AppsNotDetected onRefresh={onRefresh} />
   }
 
   return <NoProfilesYet onCreate={onCreate} />
@@ -55,7 +53,7 @@ function NoProfilesYet({ onCreate }: NoProfilesYetProps) {
         Create your first profile.
       </h1>
       <p className="m-0 mb-5 max-w-[380px] text-[13.5px] leading-[1.55] tracking-[-0.003em] text-muted">
-        Each profile is one isolated Claude or Codex account, with its own Desktop launcher and CLI wrapper. Logins,
+        Each profile is one isolated Claude or ChatGPT account, with its own Desktop launcher and CLI wrapper. Logins,
         history, and chats stay isolated.
       </p>
       <Button
@@ -72,11 +70,11 @@ function NoProfilesYet({ onCreate }: NoProfilesYetProps) {
   )
 }
 
-type ClaudeNotDetectedProps = {
+type AppsNotDetectedProps = {
   onRefresh: () => Promise<void> | void
 }
 
-function ClaudeNotDetected({ onRefresh }: ClaudeNotDetectedProps) {
+function AppsNotDetected({ onRefresh }: AppsNotDetectedProps) {
   const [refreshing, setRefreshing] = useState(false)
 
   async function handleRefresh() {
@@ -95,29 +93,34 @@ function ClaudeNotDetected({ onRefresh }: ClaudeNotDetectedProps) {
     <main className="flex h-full min-h-[600px] flex-1 flex-col items-center justify-center px-10 py-16 text-center">
       <BrandMark />
       <div className="mb-2.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-strong">
-        Claude not detected
+        No supported app detected
       </div>
       <h1 className="m-0 mb-3 text-h1 font-bold tracking-[-0.028em] text-ink leading-[1.1]">
-        Install Claude to begin.
+        Install an app to begin.
       </h1>
       <p className="m-0 mb-6 max-w-[420px] text-[13.5px] leading-[1.55] tracking-[-0.003em] text-muted">
-        ai-profiles wraps the Claude and Codex desktop apps and CLIs. Install Claude to get started.
+        ai-profiles supports Claude Desktop, ChatGPT Desktop, Claude Code, and the Codex CLI.
       </p>
       <div className="mb-6 flex w-full max-w-[440px] flex-col gap-2.5 text-left">
         <div className="rounded-lg border border-border bg-white px-3.5 py-3 text-[12.5px] leading-[1.5] text-ink-soft dark:bg-cream-2">
-          <div className="mb-0.5 font-medium text-ink">Claude Desktop</div>
+          <div className="mb-0.5 font-medium text-ink">Desktop apps</div>
           <span className="text-muted">
-            Download from{' '}
+            Download{' '}
             <a className="underline" href="https://claude.ai/download" target="_blank" rel="noreferrer">
-              claude.ai/download
+              Claude
+            </a>{' '}
+            or{' '}
+            <a className="underline" href="https://chatgpt.com/download/" target="_blank" rel="noreferrer">
+              ChatGPT
             </a>
             .
           </span>
         </div>
         <div className="rounded-lg border border-border bg-white px-3.5 py-3 text-[12.5px] leading-[1.5] text-ink-soft dark:bg-cream-2">
-          <div className="mb-0.5 font-medium text-ink">Claude CLI</div>
+          <div className="mb-0.5 font-medium text-ink">Command-line apps</div>
           <span className="text-muted">
-            Run <code className="font-mono text-mono text-ink">npm install -g @anthropic-ai/claude-code</code>.
+            Install <code className="font-mono text-mono text-ink">@anthropic-ai/claude-code</code> or{' '}
+            <code className="font-mono text-mono text-ink">@openai/codex</code> with npm.
           </span>
         </div>
       </div>

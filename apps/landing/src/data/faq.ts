@@ -22,7 +22,7 @@ export const faqEntries: ReadonlyArray<FaqEntry> = [
   {
     question: "What does 'migrate' actually do to my data?",
     answer:
-      'Three things, in order: (1) copies the stock app data into the new profile directory under ~/Library/Application Support/ai-profiles/profiles/<id>/ — ~/.claude and ~/Library/Application Support/Claude for a Claude profile, or ~/.codex and ~/Library/Application Support/Codex for a Codex profile; (2) moves the originals into a 7-day backup dir under migration-backup-<timestamp>/; (3) generates the CLI wrapper and launcher (claude-<slug> + Claude (<Name>).app, or codex-<slug> + Codex (<Name>).app). To revert: copy the backup folder contents back to their original locations.',
+      'Three things, in order: (1) copies the stock app data into the new profile directory under ~/Library/Application Support/ai-profiles/profiles/<id>/ — ~/.claude and ~/Library/Application Support/Claude for a Claude profile, or ~/.codex and ~/Library/Application Support/Codex for an OpenAI profile (ChatGPT Desktop retains the Codex support-directory name); (2) moves the originals into a 7-day backup dir under migration-backup-<timestamp>/; (3) generates the CLI wrapper and launcher (claude-<slug> + Claude (<Name>).app, or codex-<slug> + ChatGPT (<Name>).app). To revert: copy the backup folder contents back to their original locations.',
   },
   {
     question: 'Is it affiliated with Anthropic or OpenAI?',

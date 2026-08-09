@@ -27,6 +27,9 @@ pub enum AppKind {
 pub struct AppSpec {
     /// Human-facing product name, e.g. `"Claude"`.
     pub display_name: &'static str,
+    /// Human-facing CLI product name, e.g. `"Codex"` when the desktop app is
+    /// branded as ChatGPT but the command-line product remains Codex.
+    pub cli_display_name: &'static str,
     /// Name passed to `open -a <name>`, e.g. `"Claude"`.
     pub gui_app_name: &'static str,
     /// Stock bundle file name under `/Applications`, e.g. `"Claude.app"`.
@@ -39,6 +42,8 @@ pub struct AppSpec {
     pub gui_macos_exec: &'static str,
     /// Prefix for generated launcher bundles: `"<prefix> (<name>).app"`.
     pub launcher_prefix: &'static str,
+    /// Old launcher bundle prefixes that this app used to generate.
+    pub legacy_launcher_prefixes: &'static [&'static str],
     /// Real CLI binary the wrapper execs, e.g. `"claude"`.
     pub cli_binary: &'static str,
     /// Prefix for generated CLI wrappers: `"<prefix>-<slug>"`.
@@ -64,11 +69,13 @@ pub struct AppSpec {
 
 pub const CLAUDE: AppSpec = AppSpec {
     display_name: "Claude",
+    cli_display_name: "Claude",
     gui_app_name: "Claude",
     gui_bundle_name: "Claude.app",
     gui_support_dir_name: "Claude",
     gui_macos_exec: "Claude",
     launcher_prefix: "Claude",
+    legacy_launcher_prefixes: &[],
     cli_binary: "claude",
     cli_wrapper_prefix: "claude",
     cli_config_env: "CLAUDE_CONFIG_DIR",
@@ -78,12 +85,14 @@ pub const CLAUDE: AppSpec = AppSpec {
 };
 
 pub const CODEX: AppSpec = AppSpec {
-    display_name: "Codex",
-    gui_app_name: "Codex",
-    gui_bundle_name: "Codex.app",
+    display_name: "ChatGPT",
+    cli_display_name: "Codex",
+    gui_app_name: "ChatGPT",
+    gui_bundle_name: "ChatGPT.app",
     gui_support_dir_name: "Codex",
-    gui_macos_exec: "Codex",
-    launcher_prefix: "Codex",
+    gui_macos_exec: "ChatGPT",
+    launcher_prefix: "ChatGPT",
+    legacy_launcher_prefixes: &["Codex"],
     cli_binary: "codex",
     cli_wrapper_prefix: "codex",
     cli_config_env: "CODEX_HOME",
@@ -150,7 +159,13 @@ mod tests {
     #[test]
     fn codex_spec_exposes_codex_surface() {
         let codex = spec(AppKind::Codex);
-        assert_eq!(codex.gui_bundle_name, "Codex.app");
+        assert_eq!(codex.display_name, "ChatGPT");
+        assert_eq!(codex.cli_display_name, "Codex");
+        assert_eq!(codex.gui_app_name, "ChatGPT");
+        assert_eq!(codex.gui_bundle_name, "ChatGPT.app");
+        assert_eq!(codex.gui_macos_exec, "ChatGPT");
+        assert_eq!(codex.launcher_prefix, "ChatGPT");
+        assert_eq!(codex.legacy_launcher_prefixes, &["Codex"]);
         assert_eq!(codex.cli_binary, "codex");
         assert_eq!(codex.cli_config_env, "CODEX_HOME");
         assert_eq!(codex.cli_stock_config_dir_name, ".codex");

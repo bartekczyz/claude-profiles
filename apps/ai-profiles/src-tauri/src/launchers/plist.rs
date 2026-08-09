@@ -101,7 +101,7 @@ mod tests {
         let mut profile = fixture("Work");
         profile.app = crate::app_kind::AppKind::Codex;
         let xml = String::from_utf8(info_plist(&profile, "0.1.0").unwrap()).unwrap();
-        assert!(xml.contains("<string>Codex (Work)</string>"));
+        assert!(xml.contains("<string>ChatGPT (Work)</string>"));
         assert!(xml.contains("app.ai-profiles.codex.profile."));
     }
 

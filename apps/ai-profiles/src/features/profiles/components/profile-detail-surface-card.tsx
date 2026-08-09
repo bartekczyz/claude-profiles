@@ -38,7 +38,7 @@ const surfaceIcon: Record<SurfaceVariant, ReactNode> = {
 
 /**
  * Per-app surface-card copy, sourced from the registry so a Codex profile
- * describes Codex surfaces (Codex.app, the `codex` binary, `CODEX_HOME`,
+ * describes Codex surfaces (ChatGPT.app, the `codex` binary, `CODEX_HOME`,
  * `codex-<slug>`) rather than the Claude defaults.
  */
 function surfaceCopy(app: AppId, variant: SurfaceVariant): { title: string; description: string } {
@@ -50,7 +50,7 @@ function surfaceCopy(app: AppId, variant: SurfaceVariant): { title: string; desc
     }
   }
   return {
-    title: `${spec.displayName} CLI`,
+    title: `${spec.cliDisplayName} CLI`,
     description: `Wraps the ${spec.cliBinary} binary with ${spec.cliConfigEnv} pointed at this profile, exposed as ${spec.cliWrapperPrefix}-{slug}.`,
   }
 }

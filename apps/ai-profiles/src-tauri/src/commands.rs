@@ -133,6 +133,9 @@ pub fn open_profile_in_app(id: String) -> AppResult<Profile> {
     let data_dir = profile_data_dir(&id)?.join("gui-data");
     let spec = profile.app.spec();
     let app_path = gui_launcher_path(&profile.name, spec);
+    if !app_path.is_dir() {
+        crate::launchers::gui::generate(profile, env!("CARGO_PKG_VERSION"))?;
+    }
     crate::launch::focus_or_launch(&data_dir.display().to_string(), spec, || {
         let status = Command::new("open")
             .arg(&app_path)
@@ -340,7 +343,7 @@ pub fn import_existing_install(app: AppKind, input: ImportExistingInput) -> AppR
     if input.include_cli && existing.cli_path.is_none() {
         return Err(AppError::NotFound(format!(
             "no existing {} CLI install found",
-            app_spec.display_name
+            app_spec.cli_display_name
         )));
     }
 

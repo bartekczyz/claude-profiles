@@ -205,10 +205,13 @@ mod tests {
     fn matches_per_app_exec_name_only() {
         let codex_dir = "/Users/me/Library/Application Support/Codex";
         let codex_ps = format!(
-            "  77001 /Applications/Codex.app/Contents/MacOS/Codex --user-data-dir={codex_dir}\n"
+            "  77001 /Applications/ChatGPT.app/Contents/MacOS/ChatGPT --user-data-dir={codex_dir}\n"
         );
-        // The Codex exec matches under "Codex" but is invisible under "Claude".
-        assert_eq!(find_running_pid(&codex_ps, codex_dir, "Codex"), Some(77001));
+        // The ChatGPT exec matches under "ChatGPT" but is invisible under "Claude".
+        assert_eq!(
+            find_running_pid(&codex_ps, codex_dir, "ChatGPT"),
+            Some(77001)
+        );
         assert_eq!(find_running_pid(&codex_ps, codex_dir, "Claude"), None);
     }
 }
